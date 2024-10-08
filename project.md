@@ -12,6 +12,37 @@
 
 ### Description
 
+A rudimentary Nintendo Entertainment System (NES) emulator that can run NES ROMs.
+
+### Core Features
+
+1. Emulate NES Hardware
+
+2. Run little NES Games such as Snake
+
+3. A rudimentary GUI
+
+4. (Bonus) Controllers 
+
+5. (Bonus) Music
+
+
+### Challenges
+
+1. Performance
+
+2. Low-level programming
+
+3. Hardware Interfaces
+
+
+
+
+
+
+
+
+
 TODO
 
 /!\ Note: this project is not validated yet, because all we (the teachers) have is a title.
