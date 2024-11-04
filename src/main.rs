@@ -1,6 +1,7 @@
+pub mod cpu;
+
 use cpu::CPU;
 
-pub mod cpu;
 
 fn main() {
     println!("Hello, world!");
