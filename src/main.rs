@@ -9,7 +9,7 @@ fn main() {
 
     let program : Vec<u8> = vec![0xa9, 0xc0, 0x00];
     println!("{:?}", cpu);
-    cpu.interpret(&program);
+    cpu.load_and_run(&program);
     println!("{:?}", cpu);
 
 }

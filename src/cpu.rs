@@ -1,3 +1,5 @@
+use cast::{u8, u16};
+
 #[derive(Debug)]
 pub struct CPU {
     pub reg_pc : u16,
@@ -5,9 +7,11 @@ pub struct CPU {
     pub reg_a  : u8,
     pub reg_x  : u8,
     pub reg_y  : u8,
-    pub status : u8
+    pub status : u8,
+    pub memory : [u8; 0xffff]
 }
 
+#[derive(Debug)]
 pub enum CPUFlag {
     Negative,
     Overflow,
@@ -16,6 +20,20 @@ pub enum CPUFlag {
     Interrupt,
     Zero,
     Carry,
+}
+
+#[derive(Debug)]
+pub enum AddressingMode {
+    Immediate,
+    ZeroPage,
+    ZeroPageX,
+    ZeroPageY,
+    Absolute,
+    AbsoluteX,
+    AbsoluteY,
+    IndirectX,
+    IndirectY,
+    NoneAddressing,
 }
 
 impl CPU {
@@ -29,6 +47,7 @@ impl CPU {
             reg_x  : 0,
             reg_y  : 0,
             status : 0,
+            memory : [0; 0xffff]
         }
     }
 
@@ -44,12 +63,90 @@ impl CPU {
         }
     }
 
+    pub fn get_address_from_mode(&self, mode: AddressingMode) -> u16 {
+        match mode {
+            AddressingMode::Immediate => self.reg_pc,
+            AddressingMode::ZeroPage => self.mem_read_u8(self.reg_pc) as u16,
+            AddressingMode::Absolute => self.mem_read_u16(self.reg_pc),
+            AddressingMode::ZeroPageX => {
+                let pos: u8 = self.mem_read_u8(self.reg_pc);
+                pos.wrapping_add(self.reg_x) as u16
+            }
+            AddressingMode::ZeroPageY => {
+                let pos: u8 = self.mem_read_u8(self.reg_pc);
+                pos.wrapping_add(self.reg_y) as u16
+            }
+            AddressingMode::AbsoluteX => {
+                let pos: u16 = self.mem_read_u16(self.reg_pc);
+                pos.wrapping_add(self.reg_x as u16)
+            }
+            AddressingMode::AbsoluteY => {
+                let pos: u16 = self.mem_read_u16(self.reg_pc);
+                pos.wrapping_add(self.reg_y as u16)
+            }
+            AddressingMode::IndirectX => {
+                let pos: u8 = self.mem_read_u8(self.reg_pc);
+                let addr: u16 = pos.wrapping_add(self.reg_x) as u16;
+                self.mem_read_u16(addr)
+            }
+            AddressingMode::IndirectY => {
+                let pos: u8 = self.mem_read_u8(self.reg_pc);
+                let addr: u16 = self.mem_read_u16(pos as u16);
+                addr.wrapping_add(self.reg_y as u16)
+            }
+            AddressingMode::NoneAddressing => {
+                panic!("Mode : {:?} is not supported", mode);
+            }
+
+        }
+    }
+
+    fn mem_read_u8(&self, addr: u16) -> u8 {
+        self.memory[addr as usize]
+    }
+
+    // Handles little endian
+    fn mem_read_u16(&self, addr: u16) -> u16 {
+        u16(self.memory[addr.wrapping_add(1) as usize]) << 8 | u16(self.memory[addr as usize])
+    }
+
+    fn mem_write_u8(&mut self, addr: u16, value: u8) {
+        self.memory[addr as usize] = value;
+    }
+
+    // Handles little endian
+    fn mem_write_u16(&mut self, addr: u16, value: u16) {
+        self.memory[addr as usize] = u8(value & 0xff).expect("The logical and of the value and 0xff didn't work for cast (this should never happend)");
+        self.memory[addr.wrapping_add(1) as usize] = u8(value >> 8).expect("The logical right shift of the value and 0xff didn't work for cast (this should never happend)");
+    }
+
+    pub fn reset(&mut self) {
+        self.reg_a = 0;
+        self.reg_x = 0;
+        self.reg_y = 0;
+        self.reg_sp = 0;
+        self.status = 0;
+
+        self.reg_pc = self.mem_read_u16(0xfffc);
+    }
+
+    fn load_program(&mut self, program: &Vec<u8>) {
+        self.memory[0x8000 .. (0x8000 + program.len())].copy_from_slice(&program[..]);
+        self.mem_write_u16(0xfffc, 0x8000);
+    }
+
+    pub fn load_and_run(&mut self, program: &Vec<u8>) {
+        self.load_program(program);
+        self.reset();
+        // println!("{:?}", self);
+        self.run();
+    }
+
     fn update_z_flag (&mut self, reg: u8){
         if reg == 0 {
             self.set_flag(CPUFlag::Zero);
         } else {
             self.unset_flag(CPUFlag::Zero);
-
         }
     }
 
@@ -60,6 +157,7 @@ impl CPU {
             self.unset_flag(CPUFlag::Negative);
         }
     }
+
 
     fn put_flag(&mut self, flag: CPUFlag, value: bool) {
         match value {
@@ -78,22 +176,25 @@ impl CPU {
 
 
     // Loads operand into Accumulator
-    fn lda(&mut self, operand: u8) {
-        self.reg_a = operand;
+    fn lda(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        self.reg_a = self.mem_read_u8(pos);
         self.update_n_flag(self.reg_a);
         self.update_z_flag(self.reg_a);
     }
 
     // Loads operand into X register
-    fn ldx(&mut self, operand: u8) {
-        self.reg_x = operand;
+    fn ldx(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        self.reg_x = self.mem_read_u8(pos);
         self.update_n_flag(self.reg_x);
         self.update_z_flag(self.reg_x);
     }
 
     // Loads operand into Y register
-    fn ldy(&mut self, operand: u8) {
-        self.reg_y = operand;
+    fn ldy(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        self.reg_y = self.mem_read_u8(pos);
         self.update_n_flag(self.reg_y);
         self.update_z_flag(self.reg_y);
     }
@@ -139,22 +240,25 @@ impl CPU {
     }
 
     // Logical and between a value and Accumulator
-    fn and(&mut self, operand: u8) {
-        self.reg_a &= operand;
+    fn and(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        self.reg_a &= self.mem_read_u8(pos);
         self.update_n_flag(self.reg_a);
         self.update_z_flag(self.reg_a);
     }
 
     // Logical xor between a value and Accumulator
-    fn eor(&mut self, operand: u8) {
-        self.reg_a ^= operand;
+    fn eor(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        self.reg_a ^= self.mem_read_u8(pos);
         self.update_n_flag(self.reg_a);
         self.update_z_flag(self.reg_a);
     }
 
     // Logical or between a value and Accumulator
-    fn ora(&mut self, operand: u8) {
-        self.reg_a |= operand;
+    fn ora(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        self.reg_a |= self.mem_read_u8(pos);
         self.update_n_flag(self.reg_a);
         self.update_z_flag(self.reg_a);
     }
@@ -203,83 +307,220 @@ impl CPU {
 
 
 
-    pub fn interpret(&mut self, program: &Vec<u8>) {
-
-        if *(program.last().unwrap()) != 0x00 {
-            panic!("Program should end with 0x00");
-        }
-
-        self.reg_pc = 0;
-        loop {
-            let opcode: u8 = program[self.reg_pc as usize];
-            self.reg_pc += 1;
+    pub fn run(&mut self) {
+       loop {
+            let opcode: u8 = self.mem_read_u8(self.reg_pc);
+            self.reg_pc = self.reg_pc.wrapping_add(1);
         
             println!("{:?}", opcode);
             match opcode {
+                // LDA
                 0xa9 => {
-                    let operand: u8 = program[self.reg_pc as usize];
+                    self.lda(AddressingMode::Immediate);
                     self.reg_pc += 1;
-                    self.lda(operand);
                 }
-
+                0xa5 => {
+                    self.lda(AddressingMode::ZeroPage);
+                    self.reg_pc += 1;
+                }
+                0xb5 => {
+                    self.lda(AddressingMode::ZeroPageX);
+                    self.reg_pc += 1;
+                }
+                0xad => {
+                    self.lda(AddressingMode::Absolute);
+                    self.reg_pc += 2;
+                }
+                0xbd => {
+                    self.lda(AddressingMode::AbsoluteX);
+                    self.reg_pc += 2;
+                }
+                0xb9 => {
+                    self.lda(AddressingMode::AbsoluteY);
+                    self.reg_pc += 2;
+                }
+                0xa1 => {
+                    self.lda(AddressingMode::IndirectX);
+                    self.reg_pc += 1;
+                }
+                0xb1 => {
+                    self.lda(AddressingMode::IndirectY);
+                    self.reg_pc += 1;
+                }
+                
+                // LDX
                 0xa2 => {
-                    let operand: u8 = program[self.reg_pc as usize];
+                    self.ldx(AddressingMode::Immediate);
                     self.reg_pc += 1;
-                    self.ldx(operand);
+                }
+                0xa6 => {
+                    self.ldx(AddressingMode::ZeroPage);
+                    self.reg_pc += 1;
+                }
+                0xb2 => {
+                    self.ldx(AddressingMode::ZeroPageY);
+                    self.reg_pc += 1;
+                }
+                0xae => {
+                    self.ldx(AddressingMode::Absolute);
+                    self.reg_pc += 2;
+                }
+                0xbe => {
+                    self.ldx(AddressingMode::AbsoluteY);
+                    self.reg_pc += 2;
                 }
 
+                // LDY
                 0xa0 => {
-                    let operand: u8 = program[self.reg_pc as usize];
+                    self.ldy(AddressingMode::Immediate);
                     self.reg_pc += 1;
-                    self.ldy(operand);
+                }
+                0xa4 => {
+                    self.ldy(AddressingMode::ZeroPage);
+                    self.reg_pc += 1;
+                }
+                0xb4 => {
+                    self.ldy(AddressingMode::ZeroPageX);
+                    self.reg_pc += 1;
+                }
+                0xac => {
+                    self.ldy(AddressingMode::Absolute);
+                    self.reg_pc += 2;
+                }
+                0xbc => {
+                    self.ldy(AddressingMode::AbsoluteX);
+                    self.reg_pc += 2;
                 }
 
-                0x29 => {
-                    let operand: u8 = program[self.reg_pc as usize];
-                    self.reg_pc += 1;
-                    self.and(operand);
-                }
-
-                0x49 => {
-                    let operand: u8 = program[self.reg_pc as usize];
-                    self.reg_pc += 1;
-                    self.eor(operand);
-                }
-
+                // ORA
                 0x09 => {
-                    let operand: u8 = program[self.reg_pc as usize];
+                    self.ora(AddressingMode::Immediate);
                     self.reg_pc += 1;
-                    self.ora(operand);
+                }
+                0x05 => {
+                    self.ora(AddressingMode::ZeroPage);
+                    self.reg_pc += 1;
+                }
+                0x15 => {
+                    self.ora(AddressingMode::ZeroPageX);
+                    self.reg_pc += 1;
+                }
+                0x0d => {
+                    self.ora(AddressingMode::Absolute);
+                    self.reg_pc += 2;
+                }
+                0x1d => {
+                    self.ora(AddressingMode::AbsoluteX);
+                    self.reg_pc += 2;
+                }
+                0x19 => {
+                    self.ora(AddressingMode::AbsoluteY);
+                    self.reg_pc += 2;
+                }
+                0x01 => {
+                    self.ora(AddressingMode::IndirectX);
+                    self.reg_pc += 1;
+                }
+                0x11 => {
+                    self.ora(AddressingMode::IndirectY);
+                    self.reg_pc += 1;
+                }
+                
+                // AND
+                0x29 => {
+                    self.and(AddressingMode::Immediate);
+                    self.reg_pc += 1;
+                }
+                0x25 => {
+                    self.and(AddressingMode::ZeroPage);
+                    self.reg_pc += 1;
+                }
+                0x35 => {
+                    self.and(AddressingMode::ZeroPageX);
+                    self.reg_pc += 1;
+                }
+                0x2d => {
+                    self.and(AddressingMode::Absolute);
+                    self.reg_pc += 2;
+                }
+                0x3d => {
+                    self.and(AddressingMode::AbsoluteX);
+                    self.reg_pc += 2;
+                }
+                0x39 => {
+                    self.and(AddressingMode::AbsoluteY);
+                    self.reg_pc += 2;
+                }
+                0x21 => {
+                    self.and(AddressingMode::IndirectX);
+                    self.reg_pc += 1;
+                }
+                0x31 => {
+                    self.and(AddressingMode::IndirectY);
+                    self.reg_pc += 1;
                 }
 
-                0xAA => self.tax(),
-                0x8A => self.txa(),
+                // EOR
+                0x49 => {
+                    self.eor(AddressingMode::Immediate);
+                    self.reg_pc += 1;
+                }
+                0x45 => {
+                    self.eor(AddressingMode::ZeroPage);
+                    self.reg_pc += 1;
+                }
+                0x55 => {
+                    self.eor(AddressingMode::ZeroPageX);
+                    self.reg_pc += 1;
+                }
+                0x4d => {
+                    self.eor(AddressingMode::Absolute);
+                    self.reg_pc += 2;
+                }
+                0x5d => {
+                    self.eor(AddressingMode::AbsoluteX);
+                    self.reg_pc += 2;
+                }
+                0x59 => {
+                    self.eor(AddressingMode::AbsoluteY);
+                    self.reg_pc += 2;
+                }
+                0x41 => {
+                    self.eor(AddressingMode::IndirectX);
+                    self.reg_pc += 1;
+                }
+                0x51 => {
+                    self.eor(AddressingMode::IndirectY);
+                    self.reg_pc += 1;
+                }
 
-                0xA8 => self.tay(),
+
+
+                0xaa => self.tax(),
+                0x8a => self.txa(),
+
+                0xa8 => self.tay(),
                 0x98 => self.tya(),
 
-                0xBA => self.tsx(),
-                0x9A => self.txs(),
+                0xba => self.tsx(),
+                0x9a => self.txs(),
 
-                0xE8 => self.inx(),
-                0xC8 => self.iny(),
+                0xe8 => self.inx(),
+                0xc8 => self.iny(),
 
                 0x38 => self.sec(),
 
-                0xF8 => self.sed(),
+                0xf8 => self.sed(),
 
                 0x78 => self.sei(),
 
                 // NOP
-                0xEA => (),
+                0xea => (),
 
 
-                0x4C => {
-                    let low_operand: u16 = program[self.reg_pc as usize].into();
-                    self.reg_pc += 1;
-                    let high_operand: u16 = program[self.reg_pc as usize].into();
-                    self.reg_pc += 1;
-                    self.jmp(high_operand << 8 | low_operand);
+                0x4c => {
+                    let operand: u16 = self.mem_read_u16(self.reg_pc);
+                    self.jmp(operand);
                 }
 
 
@@ -287,7 +528,7 @@ impl CPU {
 
                 // BRK
                 0x00 => {
-                    self.status |= 0b0010_0000;
+                    self.status |= CPU::mask_from_flag(CPUFlag::Break);
                     return
                 }
                 _ => todo!("Opcode not implemented")
@@ -306,7 +547,7 @@ mod test {
     fn test_immediate_lda() {
         let mut cpu : CPU = CPU::new();
         let program : Vec<u8> = vec![0xa9, 0xc0, 0x00];
-        cpu.interpret(&program);
+        cpu.load_and_run(&program);
 
         assert_eq!(cpu.reg_a, 0xc0);
         assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
@@ -314,7 +555,7 @@ mod test {
 
         let mut cpu : CPU = CPU::new();
         let program : Vec<u8> = vec![0xa9, 0x12, 0x00];
-        cpu.interpret(&program);
+        cpu.load_and_run(&program);
 
         assert_eq!(cpu.reg_a, 0x12);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
@@ -322,7 +563,7 @@ mod test {
 
         let mut cpu : CPU = CPU::new();
         let program : Vec<u8> = vec![0xa9, 0x00, 0x00];
-        cpu.interpret(&program);
+        cpu.load_and_run(&program);
 
         assert_eq!(cpu.reg_a, 0x00);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
@@ -333,7 +574,7 @@ mod test {
     fn test_immediate_ldx() {
         let mut cpu : CPU = CPU::new();
         let program : Vec<u8> = vec![0xa2, 0xc0, 0x00];
-        cpu.interpret(&program);
+        cpu.load_and_run(&program);
 
         assert_eq!(cpu.reg_x, 0xc0);
         assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
@@ -341,7 +582,7 @@ mod test {
 
         let mut cpu : CPU = CPU::new();
         let program : Vec<u8> = vec![0xa2, 0x12, 0x00];
-        cpu.interpret(&program);
+        cpu.load_and_run(&program);
 
         assert_eq!(cpu.reg_x, 0x12);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
@@ -349,7 +590,7 @@ mod test {
 
         let mut cpu : CPU = CPU::new();
         let program : Vec<u8> = vec![0xa2, 0x00, 0x00];
-        cpu.interpret(&program);
+        cpu.load_and_run(&program);
 
         assert_eq!(cpu.reg_x, 0x00);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
@@ -360,7 +601,7 @@ mod test {
     fn test_immediate_ldy() {
         let mut cpu : CPU = CPU::new();
         let program : Vec<u8> = vec![0xa0, 0xc0, 0x00];
-        cpu.interpret(&program);
+        cpu.load_and_run(&program);
 
         assert_eq!(cpu.reg_y, 0xc0);
         assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
@@ -369,7 +610,7 @@ mod test {
 
         let mut cpu : CPU = CPU::new();
         let program : Vec<u8> = vec![0xa0, 0x12, 0x00];
-        cpu.interpret(&program);
+        cpu.load_and_run(&program);
 
         assert_eq!(cpu.reg_y, 0x12);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
@@ -378,7 +619,7 @@ mod test {
 
         let mut cpu : CPU = CPU::new();
         let program : Vec<u8> = vec![0xa0, 0x00, 0x00];
-        cpu.interpret(&program);
+        cpu.load_and_run(&program);
 
         assert_eq!(cpu.reg_y, 0x00);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
@@ -389,7 +630,7 @@ mod test {
     fn test_inx() {
         let mut cpu : CPU = CPU::new();
         let program : Vec<u8> = vec![0xa2, 0x13, 0xe8, 0x00];
-        cpu.interpret(&program);
+        cpu.load_and_run(&program);
 
         assert_eq!(cpu.reg_x, 0x14);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Overflow), 0);
@@ -397,7 +638,7 @@ mod test {
 
         let mut cpu : CPU = CPU::new();
         let program : Vec<u8> = vec![0xa2, 0xff, 0xe8, 0x00];
-        cpu.interpret(&program);
+        cpu.load_and_run(&program);
 
         assert_eq!(cpu.reg_x, 0x00);
         assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Overflow), 0);
@@ -407,7 +648,7 @@ mod test {
     fn test_iny() {
         let mut cpu : CPU = CPU::new();
         let program : Vec<u8> = vec![0xa0, 0x13, 0xc8, 0x00];
-        cpu.interpret(&program);
+        cpu.load_and_run(&program);
 
         assert_eq!(cpu.reg_y, 0x14);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Overflow), 0);
@@ -415,7 +656,7 @@ mod test {
 
         let mut cpu : CPU = CPU::new();
         let program : Vec<u8> = vec![0xa0, 0xff, 0xc8, 0x00];
-        cpu.interpret(&program);
+        cpu.load_and_run(&program);
 
         assert_eq!(cpu.reg_y, 0x00);
         assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Overflow), 0);
