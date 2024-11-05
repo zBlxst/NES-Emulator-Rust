@@ -49,18 +49,18 @@ pub struct Opcode {
     pub inst_size : u8
 }
 
-impl Opcode{
+impl Opcode {
 
-    pub fn exec(self, cpu: &mut CPU){
+    pub fn exec(self, cpu: &mut CPU) {
         (self.instruction)(cpu, self.address_mode);
-        cpu.reg_pc = cpu.reg_pc.wrapping_add(self.inst_size as u16 -1);
+        cpu.reg_pc = cpu.reg_pc.wrapping_add(self.inst_size as u16);
     }
 }
 
-static OPCODES: [Opcode; 256] ={
-    let mut instructions  : [Opcode; 256] = [Opcode{instruction : CPU::nop, address_mode : AddressingMode::Implied, inst_size : 1}; 256];
+static OPCODES: [Opcode; 256] = {
+    let mut instructions  : [Opcode; 256] = [Opcode{instruction : CPU::no_bind_yet, address_mode : AddressingMode::Implied, inst_size : 0}; 256];
 
-    //ADC TODO
+    // ADC
     instructions[0x69] = Opcode{instruction : CPU::adc, address_mode : AddressingMode::Immediate, inst_size : 2};
     instructions[0x65] = Opcode{instruction : CPU::adc, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0x75] = Opcode{instruction : CPU::adc, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
@@ -70,6 +70,7 @@ static OPCODES: [Opcode; 256] ={
     instructions[0x61] = Opcode{instruction : CPU::adc, address_mode : AddressingMode::IndirectX, inst_size : 2};
     instructions[0x71] = Opcode{instruction : CPU::adc, address_mode : AddressingMode::IndirectY, inst_size : 2};
 
+    // AND
     instructions[0x29] = Opcode{instruction : CPU::and, address_mode : AddressingMode::Immediate, inst_size : 2};
     instructions[0x25] = Opcode{instruction : CPU::and, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0x35] = Opcode{instruction : CPU::and, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
@@ -79,56 +80,57 @@ static OPCODES: [Opcode; 256] ={
     instructions[0x21] = Opcode{instruction : CPU::and, address_mode : AddressingMode::IndirectX, inst_size : 2};
     instructions[0x31] = Opcode{instruction : CPU::and, address_mode : AddressingMode::IndirectY, inst_size : 2};
 
-    //ASL TODO
-    instructions[0x0a] = Opcode{instruction : CPU::asl, address_mode : AddressingMode::Accumulator, inst_size : 1}; //Accumulator
+    // ASL 
+    instructions[0x0a] = Opcode{instruction : CPU::asl, address_mode : AddressingMode::Accumulator, inst_size : 1};
     instructions[0x06] = Opcode{instruction : CPU::asl, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0x16] = Opcode{instruction : CPU::asl, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
     instructions[0x0e] = Opcode{instruction : CPU::asl, address_mode : AddressingMode::Absolute, inst_size : 3};
+    instructions[0x1e] = Opcode{instruction : CPU::asl, address_mode : AddressingMode::Absolute, inst_size : 3};
 
-    //BCC TODO
-    instructions[0x90] = Opcode{instruction : CPU::bcc, address_mode : AddressingMode::Relative, inst_size : 2}; //Relative
+    // BCC 
+    instructions[0x90] = Opcode{instruction : CPU::bcc, address_mode : AddressingMode::Relative, inst_size : 2};
 
-    //BCS TODO
-    instructions[0xb0] = Opcode{instruction : CPU::bcs, address_mode : AddressingMode::Relative, inst_size : 2}; //Relative
+    // BCS
+    instructions[0xb0] = Opcode{instruction : CPU::bcs, address_mode : AddressingMode::Relative, inst_size : 2};
 
-    //BEQ TODO
-    instructions[0xf0] = Opcode{instruction : CPU::beq, address_mode : AddressingMode::Relative, inst_size : 2}; //Relative
+    // BEQ
+    instructions[0xf0] = Opcode{instruction : CPU::beq, address_mode : AddressingMode::Relative, inst_size : 2};
 
-    //BIT TODO
+    // BIT
     instructions[0x24] = Opcode{instruction : CPU::bit, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0x2c] = Opcode{instruction : CPU::bit, address_mode : AddressingMode::Absolute, inst_size : 3};
 
-    //BMI TODO
-    instructions[0x30] = Opcode{instruction : CPU::bmi, address_mode : AddressingMode::Relative, inst_size : 2}; //Relative
+    // BMI 
+    instructions[0x30] = Opcode{instruction : CPU::bmi, address_mode : AddressingMode::Relative, inst_size : 2};
 
-    //BNE TODO
-    instructions[0xd0] = Opcode{instruction : CPU::bne, address_mode : AddressingMode::Relative, inst_size : 2}; //Relative
+    // BNE
+    instructions[0xd0] = Opcode{instruction : CPU::bne, address_mode : AddressingMode::Relative, inst_size : 2}; 
 
-    //BPL TODO
-    instructions[0x10] = Opcode{instruction : CPU::bpl, address_mode : AddressingMode::Relative, inst_size : 2}; //Relative
+    // BPL
+    instructions[0x10] = Opcode{instruction : CPU::bpl, address_mode : AddressingMode::Relative, inst_size : 2};
 
-    //BRK TODO
+    // BRK
     instructions[0x00] = Opcode{instruction : CPU::brk, address_mode : AddressingMode::Implied, inst_size : 1};
 
-    //BVC TODO
-    instructions[0x50] = Opcode{instruction : CPU::bvc, address_mode : AddressingMode::Relative, inst_size : 2}; //Relative
+    // BVC
+    instructions[0x50] = Opcode{instruction : CPU::bvc, address_mode : AddressingMode::Relative, inst_size : 2};
 
-    //BVS TODO
-    instructions[0x70] = Opcode{instruction : CPU::bvs, address_mode : AddressingMode::Relative, inst_size : 2}; //Relative
+    // BVS
+    instructions[0x70] = Opcode{instruction : CPU::bvs, address_mode : AddressingMode::Relative, inst_size : 2};
 
-    //CLC TODO
+    // CLC
     instructions[0x18] = Opcode{instruction : CPU::clc, address_mode : AddressingMode::Implied, inst_size : 1};
 
-    //CLD TODO
+    // CLD
     instructions[0xd8] = Opcode{instruction : CPU::cld, address_mode : AddressingMode::Implied, inst_size : 1};
 
-    //CLI TODO
+    // CLI
     instructions[0x58] = Opcode{instruction : CPU::cli, address_mode : AddressingMode::Implied, inst_size : 1};
 
-    //CLV TODO
+    // CLV
     instructions[0xb8] = Opcode{instruction : CPU::clv, address_mode : AddressingMode::Implied, inst_size : 1};
 
-    //CMP TODO
+    // CMP
     instructions[0xc9] = Opcode{instruction : CPU::cmp, address_mode : AddressingMode::Immediate, inst_size : 2};
     instructions[0xc5] = Opcode{instruction : CPU::cmp, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0xd5] = Opcode{instruction : CPU::cmp, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
@@ -138,28 +140,29 @@ static OPCODES: [Opcode; 256] ={
     instructions[0xc1] = Opcode{instruction : CPU::cmp, address_mode : AddressingMode::IndirectX, inst_size : 2};
     instructions[0xd1] = Opcode{instruction : CPU::cmp, address_mode : AddressingMode::IndirectY, inst_size : 2};
 
-    //CPX TODO
+    // CPX
     instructions[0xe0] = Opcode{instruction : CPU::cpx, address_mode : AddressingMode::Immediate, inst_size : 2};
     instructions[0xe4] = Opcode{instruction : CPU::cpx, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0xec] = Opcode{instruction : CPU::cpx, address_mode : AddressingMode::Absolute, inst_size : 3};
     
-    //CPY TODO
+    // CPY
     instructions[0xc0] = Opcode{instruction : CPU::cpy, address_mode : AddressingMode::Immediate, inst_size : 2};
     instructions[0xc4] = Opcode{instruction : CPU::cpy, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0xcc] = Opcode{instruction : CPU::cpy, address_mode : AddressingMode::Absolute, inst_size : 3};
 
-    //DEC TODO
+    // DEC
     instructions[0xc6] = Opcode{instruction : CPU::dec, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0xd6] = Opcode{instruction : CPU::dec, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
     instructions[0xce] = Opcode{instruction : CPU::dec, address_mode : AddressingMode::Absolute, inst_size : 3};
     instructions[0xde] = Opcode{instruction : CPU::dec, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
 
-    //DEX TODO
+    // DEX
     instructions[0xca] = Opcode{instruction : CPU::dex, address_mode : AddressingMode::Implied, inst_size : 1};
 
-    //DEY TODO
+    // DEY
     instructions[0x88] = Opcode{instruction : CPU::dey, address_mode : AddressingMode::Implied, inst_size : 1};
 
+    // EOR
     instructions[0x49] = Opcode{instruction : CPU::eor, address_mode : AddressingMode::Immediate, inst_size : 2};
     instructions[0x45] = Opcode{instruction : CPU::eor, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0x55] = Opcode{instruction : CPU::eor, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
@@ -169,22 +172,26 @@ static OPCODES: [Opcode; 256] ={
     instructions[0x41] = Opcode{instruction : CPU::eor, address_mode : AddressingMode::IndirectX, inst_size : 2};
     instructions[0x51] = Opcode{instruction : CPU::eor, address_mode : AddressingMode::IndirectY, inst_size : 2};
 
-    //INC TODO
+    // INC
     instructions[0xe6] = Opcode{instruction : CPU::inc, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0xf6] = Opcode{instruction : CPU::inc, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
     instructions[0xee] = Opcode{instruction : CPU::inc, address_mode : AddressingMode::Absolute, inst_size : 3};
     instructions[0xfe] = Opcode{instruction : CPU::inc, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
 
+    // INX
     instructions[0xe8] = Opcode{instruction : CPU::inx, address_mode : AddressingMode::Implied, inst_size : 1};
 
+    // INY
     instructions[0xc8] = Opcode{instruction : CPU::iny, address_mode : AddressingMode::Implied, inst_size : 1};
 
+    // JMP
     instructions[0x4c] = Opcode{instruction : CPU::jmp, address_mode : AddressingMode::Absolute, inst_size : 3};
     instructions[0x6c] = Opcode{instruction : CPU::jmp, address_mode : AddressingMode::Indirect, inst_size : 3};
 
-    //JSR TODO
+    // JSR
     instructions[0x20] = Opcode{instruction : CPU::jsr, address_mode : AddressingMode::Absolute, inst_size : 3};
 
+    // LDA
     instructions[0xa9] = Opcode{instruction : CPU::lda, address_mode : AddressingMode::Immediate, inst_size : 2};
     instructions[0xa5] = Opcode{instruction : CPU::lda, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0xb5] = Opcode{instruction : CPU::lda, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
@@ -194,28 +201,31 @@ static OPCODES: [Opcode; 256] ={
     instructions[0xa1] = Opcode{instruction : CPU::lda, address_mode : AddressingMode::IndirectX, inst_size : 2};
     instructions[0xb1] = Opcode{instruction : CPU::lda, address_mode : AddressingMode::IndirectY, inst_size : 2};
 
+    // LDX
     instructions[0xa2] = Opcode{instruction : CPU::ldx, address_mode : AddressingMode::Immediate, inst_size : 2};
     instructions[0xa6] = Opcode{instruction : CPU::ldx, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0xb2] = Opcode{instruction : CPU::ldx, address_mode : AddressingMode::ZeroPageY, inst_size : 2};
     instructions[0xae] = Opcode{instruction : CPU::ldx, address_mode : AddressingMode::Absolute, inst_size : 3};
     instructions[0xbe] = Opcode{instruction : CPU::ldx, address_mode : AddressingMode::AbsoluteY, inst_size : 3};
 
+    // LDY
     instructions[0xa0] = Opcode{instruction : CPU::ldy, address_mode : AddressingMode::Immediate, inst_size : 2};
     instructions[0xa4] = Opcode{instruction : CPU::ldy, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0xb4] = Opcode{instruction : CPU::ldy, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
     instructions[0xac] = Opcode{instruction : CPU::ldy, address_mode : AddressingMode::Absolute, inst_size : 3};
     instructions[0xbc] = Opcode{instruction : CPU::ldy, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
 
-    //LSR TODO
+    // LSR
     instructions[0x4a] = Opcode{instruction : CPU::lsr, address_mode : AddressingMode::Accumulator, inst_size : 1};
     instructions[0x46] = Opcode{instruction : CPU::lsr, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0x56] = Opcode{instruction : CPU::lsr, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
     instructions[0x4e] = Opcode{instruction : CPU::lsr, address_mode : AddressingMode::Absolute, inst_size : 3};
     instructions[0x5e] = Opcode{instruction : CPU::lsr, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
 
-    //NOP TODO
+    // NOP
     instructions[0xea] = Opcode{instruction : CPU::nop, address_mode : AddressingMode::Implied, inst_size : 1};
 
+    // ORA
     instructions[0x09] = Opcode{instruction : CPU::ora, address_mode : AddressingMode::Immediate, inst_size : 2};
     instructions[0x05] = Opcode{instruction : CPU::ora, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0x15] = Opcode{instruction : CPU::ora, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
@@ -225,39 +235,39 @@ static OPCODES: [Opcode; 256] ={
     instructions[0x01] = Opcode{instruction : CPU::ora, address_mode : AddressingMode::IndirectX, inst_size : 2};
     instructions[0x11] = Opcode{instruction : CPU::ora, address_mode : AddressingMode::IndirectY, inst_size : 2};
 
-    //PHA TODO
+    // PHA
     instructions[0x48] = Opcode{instruction : CPU::pha, address_mode : AddressingMode::Implied, inst_size : 1};
 
-    //PHP TODO
+    // PHP
     instructions[0x08] = Opcode{instruction : CPU::php, address_mode : AddressingMode::Implied, inst_size : 1};
 
-    //PLA TODO
+    // PLA
     instructions[0x68] = Opcode{instruction : CPU::pla, address_mode : AddressingMode::Implied, inst_size : 1};
 
-    //PLP TODO
+    // PLP
     instructions[0x28] = Opcode{instruction : CPU::plp, address_mode : AddressingMode::Implied, inst_size : 1};
 
-    //ROL TODO
+    // ROL
     instructions[0x2a] = Opcode{instruction : CPU::rol, address_mode : AddressingMode::Accumulator, inst_size : 1}; 
     instructions[0x26] = Opcode{instruction : CPU::rol, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0x36] = Opcode{instruction : CPU::rol, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
     instructions[0x2e] = Opcode{instruction : CPU::rol, address_mode : AddressingMode::Absolute, inst_size : 3};
     instructions[0x3e] = Opcode{instruction : CPU::rol, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
 
-    //ROR TODO
+    // ROR
     instructions[0x6a] = Opcode{instruction : CPU::ror, address_mode : AddressingMode::Accumulator, inst_size : 1};
     instructions[0x66] = Opcode{instruction : CPU::ror, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0x76] = Opcode{instruction : CPU::ror, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
     instructions[0x6e] = Opcode{instruction : CPU::ror, address_mode : AddressingMode::Absolute, inst_size : 3};
     instructions[0x7e] = Opcode{instruction : CPU::ror, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
 
-    //RTI TODO
+    // RTI
     instructions[0x40] = Opcode{instruction : CPU::rti, address_mode : AddressingMode::Implied, inst_size : 1};
 
-    //RTS TODO
+    // RTS
     instructions[0x60] = Opcode{instruction : CPU::rts, address_mode : AddressingMode::Implied, inst_size : 1};
 
-    //SBC TODO
+    // SBC
     instructions[0xe9] = Opcode{instruction : CPU::sbc, address_mode : AddressingMode::Immediate, inst_size : 2};
     instructions[0xe5] = Opcode{instruction : CPU::sbc, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0xf5] = Opcode{instruction : CPU::sbc, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
@@ -267,13 +277,16 @@ static OPCODES: [Opcode; 256] ={
     instructions[0xe1] = Opcode{instruction : CPU::sbc, address_mode : AddressingMode::IndirectX, inst_size : 2};
     instructions[0xf1] = Opcode{instruction : CPU::sbc, address_mode : AddressingMode::IndirectY, inst_size : 2};
 
+    // SEC
     instructions[0x38] = Opcode{instruction : CPU::sec, address_mode : AddressingMode::Implied, inst_size : 1};
 
+    // SED
     instructions[0xf8] = Opcode{instruction : CPU::sed, address_mode : AddressingMode::Implied, inst_size : 1};
 
+    // SEI
     instructions[0x78] = Opcode{instruction : CPU::sei, address_mode : AddressingMode::Implied, inst_size : 1};
 
-    //STA TODO
+    // STA
     instructions[0x85] = Opcode{instruction : CPU::sta, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0x95] = Opcode{instruction : CPU::sta, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
     instructions[0x8d] = Opcode{instruction : CPU::sta, address_mode : AddressingMode::Absolute, inst_size : 3};
@@ -282,26 +295,32 @@ static OPCODES: [Opcode; 256] ={
     instructions[0x81] = Opcode{instruction : CPU::sta, address_mode : AddressingMode::IndirectX, inst_size : 2};
     instructions[0x91] = Opcode{instruction : CPU::sta, address_mode : AddressingMode::IndirectY, inst_size : 2};
 
-    //STX TODO
+    // STX
     instructions[0x86] = Opcode{instruction : CPU::stx, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0x96] = Opcode{instruction : CPU::stx, address_mode : AddressingMode::ZeroPageY, inst_size : 2};
     instructions[0x8e] = Opcode{instruction : CPU::stx, address_mode : AddressingMode::Absolute, inst_size : 3};
 
-    //STY TODO
+    // STY
     instructions[0x84] = Opcode{instruction : CPU::sty, address_mode : AddressingMode::ZeroPage, inst_size : 2};
     instructions[0x94] = Opcode{instruction : CPU::sty, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
     instructions[0x8c] = Opcode{instruction : CPU::sty, address_mode : AddressingMode::Absolute, inst_size : 3};
 
+    // TAX
     instructions[0xaa] = Opcode{instruction : CPU::tax, address_mode : AddressingMode::Implied, inst_size : 1};
 
+    // TAY
     instructions[0xa8] = Opcode{instruction : CPU::tay, address_mode : AddressingMode::Implied, inst_size : 1};
 
+    // TSX
     instructions[0xba] = Opcode{instruction : CPU::tsx, address_mode : AddressingMode::Implied, inst_size : 1};
 
+    // TXA
     instructions[0x8a] = Opcode{instruction : CPU::txa, address_mode : AddressingMode::Implied, inst_size : 1};
 
+    // TXS
     instructions[0x9a] = Opcode{instruction : CPU::txs, address_mode : AddressingMode::Implied, inst_size : 1};
 
+    // TYA
     instructions[0x98] = Opcode{instruction : CPU::tya, address_mode : AddressingMode::Implied, inst_size : 1};
 
     instructions
@@ -370,7 +389,6 @@ impl CPU {
     pub fn run(&mut self) {
        loop {
             let opcode: u8 = self.mem_read_u8(self.reg_pc);
-            self.reg_pc = self.reg_pc.wrapping_add(1);
 
             println!("opcode :{:?}", opcode);
             OPCODES[opcode as usize].exec(self);
@@ -397,12 +415,12 @@ impl CPU {
     }
 
 
-    fn update_z_flag (&mut self, reg: u8){
-        self.put_flag(CPUFlag::Zero, reg == 0);
+    fn update_z_flag (&mut self, value: u8) {
+        self.put_flag(CPUFlag::Zero, value == 0);
     }
 
-    fn update_n_flag (&mut self, reg: u8){
-        self.put_flag(CPUFlag::Negative, reg & CPU::mask_from_flag(CPUFlag::Negative) != 0);
+    fn update_n_flag (&mut self, value: u8) {
+        self.put_flag(CPUFlag::Negative, value & CPU::mask_from_flag(CPUFlag::Negative) != 0);
     }
 
 
@@ -428,32 +446,32 @@ impl CPU {
     // Implementation of addressing modes
     fn get_address_from_mode(&self, mode: AddressingMode) -> u16 {
         match mode {
-            AddressingMode::Immediate => self.reg_pc,
-            AddressingMode::ZeroPage => self.mem_read_u8(self.reg_pc) as u16,
-            AddressingMode::Absolute => self.mem_read_u16(self.reg_pc),
+            AddressingMode::Immediate => self.reg_pc.wrapping_add(1),
+            AddressingMode::ZeroPage => self.mem_read_u8(self.reg_pc.wrapping_add(1)) as u16,
+            AddressingMode::Absolute => self.mem_read_u16(self.reg_pc.wrapping_add(1)),
             AddressingMode::ZeroPageX => {
-                let pos: u8 = self.mem_read_u8(self.reg_pc);
+                let pos: u8 = self.mem_read_u8(self.reg_pc.wrapping_add(1));
                 pos.wrapping_add(self.reg_x) as u16
             }
             AddressingMode::ZeroPageY => {
-                let pos: u8 = self.mem_read_u8(self.reg_pc);
+                let pos: u8 = self.mem_read_u8(self.reg_pc.wrapping_add(1));
                 pos.wrapping_add(self.reg_y) as u16
             }
             AddressingMode::AbsoluteX => {
-                let pos: u16 = self.mem_read_u16(self.reg_pc);
+                let pos: u16 = self.mem_read_u16(self.reg_pc.wrapping_add(1));
                 pos.wrapping_add(self.reg_x as u16)
             }
             AddressingMode::AbsoluteY => {
-                let pos: u16 = self.mem_read_u16(self.reg_pc);
+                let pos: u16 = self.mem_read_u16(self.reg_pc.wrapping_add(1));
                 pos.wrapping_add(self.reg_y as u16)
             }
             AddressingMode::IndirectX => {
-                let pos: u8 = self.mem_read_u8(self.reg_pc);
+                let pos: u8 = self.mem_read_u8(self.reg_pc.wrapping_add(1));
                 let addr: u16 = pos.wrapping_add(self.reg_x) as u16;
                 self.mem_read_u16(addr)
             }
             AddressingMode::IndirectY => {
-                let pos: u8 = self.mem_read_u8(self.reg_pc);
+                let pos: u8 = self.mem_read_u8(self.reg_pc.wrapping_add(1));
                 let addr: u16 = self.mem_read_u16(pos as u16);
                 addr.wrapping_add(self.reg_y as u16)
             }
@@ -478,6 +496,10 @@ impl CPU {
         }
     }
     
+    fn no_bind_yet(&mut self, _addressmode: AddressingMode) {
+       todo!("This opcode is not binded yet !")
+    }
+
     // Add with carry
     fn adc(&mut self, addressmode: AddressingMode) {
         let carry: u8 = { if self.status & CPU::mask_from_flag(CPUFlag::Carry) != 0 {1} else {0} };
@@ -512,7 +534,22 @@ impl CPU {
 
     // Arithmetic shift left
     fn asl(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let overflowing: bool;
+        let res: u8;
+        match addressmode {
+            AddressingMode::Accumulator => {
+                (res, overflowing) = self.reg_a.overflowing_mul(2);
+                self.reg_a = res;
+            }
+            _ => {
+                let pos: u16 = self.get_address_from_mode(addressmode);
+                (res, overflowing) = self.mem_read_u8(pos).overflowing_mul(2);
+                self.mem_write_u8(pos, res);
+            }
+        }
+        self.put_flag(CPUFlag::Carry, overflowing);
+        self.update_n_flag(res);
+        self.update_z_flag(res);
     }
 
     // Branch on carry clear
