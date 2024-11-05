@@ -439,6 +439,10 @@ impl CPU {
         self.status &= !CPU::mask_from_flag(flag);
     }
 
+    fn get_flag(&self, flag: CPUFlag) -> bool {
+        self.status & CPU::mask_from_flag(flag) != 0
+    }
+
     // ===================================================================
     // ======================== INSTRUCTION SET ==========================
     // ===================================================================
@@ -502,7 +506,7 @@ impl CPU {
 
     // Add with carry
     fn adc(&mut self, addressmode: AddressingMode) {
-        let carry: u8 = { if self.status & CPU::mask_from_flag(CPUFlag::Carry) != 0 {1} else {0} };
+        let carry: u8 = { if self.get_flag(CPUFlag::Carry) {1} else {0} };
         let pos: u16 = self.get_address_from_mode(addressmode);
         let overflowed: bool;
         let overflowed2: bool;
@@ -554,7 +558,7 @@ impl CPU {
 
     // Branch on carry clear
     fn bcc(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        todo!("To implement !")
     }
 
     // Branch on carry set
