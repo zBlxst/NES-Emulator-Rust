@@ -398,19 +398,11 @@ impl CPU {
 
 
     fn update_z_flag (&mut self, reg: u8){
-        if reg == 0 {
-            self.set_flag(CPUFlag::Zero);
-        } else {
-            self.unset_flag(CPUFlag::Zero);
-        }
+        self.put_flag(CPUFlag::Zero, reg == 0);
     }
 
     fn update_n_flag (&mut self, reg: u8){
-        if reg & CPU::mask_from_flag(CPUFlag::Negative) != 0 {
-            self.set_flag(CPUFlag::Negative);
-        } else {
-            self.unset_flag(CPUFlag::Negative);
-        }
+        self.put_flag(CPUFlag::Negative, reg & CPU::mask_from_flag(CPUFlag::Negative) != 0);
     }
 
 
@@ -488,7 +480,26 @@ impl CPU {
     
     // Add with carry
     fn adc(&mut self, addressmode: AddressingMode) {
-       todo!("To implement !"); 
+        let carry: u8 = { if self.status & CPU::mask_from_flag(CPUFlag::Carry) != 0 {1} else {0} };
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        let overflowed: bool;
+        let overflowed2: bool;
+
+        let base_a: u8 = self.reg_a;
+        let to_add: u8 = self.mem_read_u8(pos);
+
+        (self.reg_a, overflowed) = self.reg_a.overflowing_add(to_add);
+        (self.reg_a, overflowed2) = self.reg_a.overflowing_add(carry);
+        
+        self.put_flag(CPUFlag::Carry, overflowed | overflowed2);
+        self.update_n_flag(self.reg_a);
+        self.update_z_flag(self.reg_a);
+
+        // Set overflow if we add two positive (negative) integers which result to a negative (positive) integer
+        // First parenthesis (with negation) has MSB set if base_a and to_add have the same MSB
+        // Second parenthesis has MSB set if base_a and the result have different MSB 
+        self.put_flag(CPUFlag::Overflow, (!(base_a ^ to_add) & (base_a ^ self.reg_a) & 0b1000_0000) != 0);
+        
     }
 
     // Logical and between a value and Accumulator
