@@ -492,7 +492,6 @@ impl CPU {
             AddressingMode::Accumulator => {
                 panic!("Mode : {:?} is not supported", mode);
             }
-
             AddressingMode::NoneAddressing => {
                 panic!("Mode : {:?} is not supported", mode);
             }
@@ -834,17 +833,20 @@ impl CPU {
 
     // Store Accumulator in memory
     fn sta(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        self.mem_write_u8(pos, self.reg_a);
     }
 
     // Store X register in memory
     fn stx(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        self.mem_write_u8(pos, self.reg_x);
     }
 
     // Store Y register in memory
     fn sty(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        self.mem_write_u8(pos, self.reg_y);
     }    
 
     // Transfer Accumulator to X register
