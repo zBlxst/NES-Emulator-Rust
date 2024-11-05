@@ -466,7 +466,6 @@ impl CPU {
                 addr.wrapping_add(self.reg_y as u16)
             }
 
-            // TODO
             AddressingMode::Implied => {
                 panic!("Mode : {:?} is not supported", mode);
             }
@@ -489,7 +488,7 @@ impl CPU {
     
     // Add with carry
     fn adc(&mut self, addressmode: AddressingMode) {
-       // TODO 
+       todo!("To implement !"); 
     }
 
     // Logical and between a value and Accumulator
@@ -502,107 +501,107 @@ impl CPU {
 
     // Arithmetic shift left
     fn asl(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Branch on carry clear
     fn bcc(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Branch on carry set
     fn bcs(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Branch on equal
     fn beq(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Bit test
     fn bit(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Branch on minus
     fn bmi(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Branch on not equal
     fn bne(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Branch on plus
     fn bpl(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Force break
-    fn brk(&mut self, addressmode: AddressingMode) {
+    fn brk(&mut self, _addressmode: AddressingMode) {
         self.set_flag(CPUFlag::Break);
     }
 
     // Branch on overflow clear
     fn bvc(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Branch on overflow set
     fn bvs(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Clear carry flag
-    fn clc(&mut self, addressmode: AddressingMode) {
+    fn clc(&mut self, _addressmode: AddressingMode) {
         self.unset_flag(CPUFlag::Carry);
     }
 
     // Clear decimal mode
-    fn cld(&mut self, addressmode: AddressingMode) {
+    fn cld(&mut self, _addressmode: AddressingMode) {
         self.unset_flag(CPUFlag::Decimal);
     }
 
     // Clear interrupt disable
-    fn cli(&mut self, addressmode: AddressingMode) {
+    fn cli(&mut self, _addressmode: AddressingMode) {
         self.unset_flag(CPUFlag::Interrupt);
     }
 
     // Clear overflow flag
-    fn clv(&mut self, addressmode: AddressingMode) {
+    fn clv(&mut self, _addressmode: AddressingMode) {
         self.unset_flag(CPUFlag::Overflow);
     }
 
     // Compare
     fn cmp(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Compare X register
     fn cpx(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Compare Y register
     fn cpy(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Decrement memory
     fn dec(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Decrement X register
     fn dex(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Decrement Y register
     fn dey(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Exclusive or
@@ -616,11 +615,11 @@ impl CPU {
 
     // Increment memory
     fn inc(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Increment X register
-    fn inx(&mut self, addressmode: AddressingMode) {
+    fn inx(&mut self, _addressmode: AddressingMode) {
         let overflowed : bool;
         (self.reg_x, overflowed) = self.reg_x.overflowing_add(1);
 
@@ -630,7 +629,7 @@ impl CPU {
     }
 
     // Increment Y register
-    fn iny(&mut self, addressmode: AddressingMode) {
+    fn iny(&mut self, _addressmode: AddressingMode) {
         let overflowed : bool;
         (self.reg_y, overflowed) = self.reg_y.overflowing_add(1);
 
@@ -646,7 +645,7 @@ impl CPU {
 
     // Jump to a subroutine
     fn jsr(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Loads operand into Accumulator
@@ -675,11 +674,11 @@ impl CPU {
 
     // Logical shift right
     fn lsr(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     fn nop(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Logical or between a value and Accumulator
@@ -692,95 +691,95 @@ impl CPU {
 
     // Push Accumulator on stack
     fn pha(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Push Processor status on stack
     fn php(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Pull Accumulator from stack
     fn pla(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Pull Processor status from stack
     fn plp(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Rotate left
     fn rol(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Rotate right
     fn ror(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Return from interrupt
     fn rti(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Return from subroutine
     fn rts(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Subtract with carry
     fn sbc(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Set carry flag
-    fn sec(&mut self, addressmode: AddressingMode) {
+    fn sec(&mut self, _addressmode: AddressingMode) {
         self.set_flag(CPUFlag::Carry);
     }
 
     // Set decimal flag
-    fn sed(&mut self, addressmode: AddressingMode) {
+    fn sed(&mut self, _addressmode: AddressingMode) {
         self.set_flag(CPUFlag::Decimal);
     }
 
     // Set interruption disable flag
-    fn sei(&mut self, addressmode: AddressingMode) {
+    fn sei(&mut self, _addressmode: AddressingMode) {
         self.set_flag(CPUFlag::Interrupt);
     }
 
     // Store Accumulator in memory
     fn sta(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Store X register in memory
     fn stx(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }
 
     // Store Y register in memory
     fn sty(&mut self, addressmode: AddressingMode) {
-        // TODO
+        todo!("To implement !");
     }    
 
     // Transfer Accumulator to X register
-    fn tax(&mut self, addressmode: AddressingMode) {
+    fn tax(&mut self, _addressmode: AddressingMode) {
         self.reg_x = self.reg_a;
         self.update_n_flag(self.reg_x);
         self.update_z_flag(self.reg_x);
     }
 
     // Transfer Accumulator to Y register
-    fn tay(&mut self, addressmode: AddressingMode) {
+    fn tay(&mut self, _addressmode: AddressingMode) {
         self.reg_y = self.reg_a;
         self.update_n_flag(self.reg_y);
         self.update_z_flag(self.reg_y);
     }
 
     // Transfer SP register to X register
-    fn tsx(&mut self, addressmode: AddressingMode) {
+    fn tsx(&mut self, _addressmode: AddressingMode) {
         self.reg_x = self.reg_sp;
         self.update_n_flag(self.reg_x);
         self.update_z_flag(self.reg_x);
@@ -788,7 +787,7 @@ impl CPU {
 
 
     // Transfer X register to Accumulator
-    fn txa(&mut self, addressmode: AddressingMode) {
+    fn txa(&mut self, _addressmode: AddressingMode) {
         self.reg_a = self.reg_x;
         self.update_n_flag(self.reg_a);
         self.update_z_flag(self.reg_a);
@@ -796,14 +795,14 @@ impl CPU {
 
 
     // Transfer X register to SP register
-    fn txs(&mut self, addressmode: AddressingMode) {
+    fn txs(&mut self, _addressmode: AddressingMode) {
         self.reg_sp = self.reg_x;
     }
 
 
 
     // Transfer Y register to Accumulator
-    fn tya(&mut self, addressmode: AddressingMode) {
+    fn tya(&mut self, _addressmode: AddressingMode) {
         self.reg_a = self.reg_y;
         self.update_n_flag(self.reg_a);
         self.update_z_flag(self.reg_a);
