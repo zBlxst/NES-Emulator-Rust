@@ -724,7 +724,11 @@ impl CPU {
 
     // Jump to a spectified address
     fn jmp(&mut self, addressmode: AddressingMode) {// Does not match other functions prototype
-        todo!("Implement JMP");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+
+        // Substracts 3 to balance the +3 after the instruction
+        // We still have to check if the compiler/assembler doesn't already handles it
+        self.reg_pc = self.mem_read_u16(pos).wrapping_sub(3);
     }
 
     // Jump to a subroutine
@@ -1007,6 +1011,6 @@ mod test {
         assert_eq!(cpu.reg_y, 0x00);
         assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Overflow), 0);
     }
-
+    
 
 }
