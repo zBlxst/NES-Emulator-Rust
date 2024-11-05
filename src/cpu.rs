@@ -341,7 +341,7 @@ impl CPU {
             reg_x  : 0,
             reg_y  : 0,
             status : 0,
-            memory : [0; 0xffff]
+            memory : [0; 0xffff],
         }
     }
 
@@ -389,13 +389,13 @@ impl CPU {
     pub fn run(&mut self) {
        loop {
             let opcode: u8 = self.mem_read_u8(self.reg_pc);
-
-            println!("opcode :{:?}", opcode);
+            println!("opcode {:?} at {:x}", opcode, self.reg_pc);
             OPCODES[opcode as usize].exec(self);
             if self.status & CPU::mask_from_flag(CPUFlag::Break) != 0 {
                 break;
             }
         }
+        println!("Execution is over !\n");
     }
     
     // ===================================================================
@@ -450,9 +450,8 @@ impl CPU {
     // Implementation of addressing modes
     fn get_address_from_mode(&self, mode: AddressingMode) -> u16 {
         match mode {
-            AddressingMode::Immediate => self.reg_pc.wrapping_add(1),
+            AddressingMode::Immediate | AddressingMode::Absolute | AddressingMode::Relative => self.reg_pc.wrapping_add(1),
             AddressingMode::ZeroPage => self.mem_read_u8(self.reg_pc.wrapping_add(1)) as u16,
-            AddressingMode::Absolute => self.mem_read_u16(self.reg_pc.wrapping_add(1)),
             AddressingMode::ZeroPageX => {
                 let pos: u8 = self.mem_read_u8(self.reg_pc.wrapping_add(1));
                 pos.wrapping_add(self.reg_x) as u16
@@ -484,9 +483,6 @@ impl CPU {
                 panic!("Mode : {:?} is not supported", mode);
             }
             AddressingMode::Indirect => {
-                panic!("Mode : {:?} is not supported", mode);
-            }
-            AddressingMode::Relative => {
                 panic!("Mode : {:?} is not supported", mode);
             }
             AddressingMode::Accumulator => {
@@ -725,7 +721,7 @@ impl CPU {
     // Jump to a spectified address
     fn jmp(&mut self, addressmode: AddressingMode) {// Does not match other functions prototype
         let pos: u16 = self.get_address_from_mode(addressmode);
-
+        println!("Pos : {:x}", pos);
         // Substracts 3 to balance the +3 after the instruction
         // We still have to check if the compiler/assembler doesn't already handles it
         self.reg_pc = self.mem_read_u16(pos).wrapping_sub(3);
@@ -913,6 +909,8 @@ impl CPU {
 
 #[cfg(test)]
 mod test {
+    use std::vec;
+
     use super::*;
 
     impl CPU {
@@ -926,19 +924,16 @@ mod test {
     #[test]
     fn test_immediate_lda() {
         let cpu = CPU::test_prog(vec![0xa9, 0xc0, 0x00]);
-
         assert_eq!(cpu.reg_a, 0xc0);
         assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Zero), 0);
 
         let cpu = CPU::test_prog(vec![0xa9, 0x12, 0x00]);
-
         assert_eq!(cpu.reg_a, 0x12);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Zero), 0);
 
         let cpu = CPU::test_prog(vec![0xa9, 0x00, 0x00]);
-
         assert_eq!(cpu.reg_a, 0x00);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
         assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Zero), 0);
@@ -947,19 +942,16 @@ mod test {
     #[test]
     fn test_immediate_ldx() {
         let cpu = CPU::test_prog(vec![0xa2, 0xc0, 0x00]);
-
         assert_eq!(cpu.reg_x, 0xc0);
         assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Zero), 0);
 
         let cpu = CPU::test_prog(vec![0xa2, 0x12, 0x00]);
-
         assert_eq!(cpu.reg_x, 0x12);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Zero), 0);
 
         let cpu = CPU::test_prog(vec![0xa2, 0x00, 0x00]);
-
         assert_eq!(cpu.reg_x, 0x00);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
         assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Zero), 0);
@@ -968,19 +960,16 @@ mod test {
     #[test]
     fn test_immediate_ldy() {
         let cpu = CPU::test_prog(vec![0xa0, 0xc0, 0x00]);
-
         assert_eq!(cpu.reg_y, 0xc0);
         assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Zero), 0);
 
         let cpu = CPU::test_prog(vec![0xa0, 0x12, 0x00]);
-
         assert_eq!(cpu.reg_y, 0x12);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Zero), 0);
 
         let cpu = CPU::test_prog(vec![0xa0, 0x00, 0x00]);
-
         assert_eq!(cpu.reg_y, 0x00);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Negative), 0);
         assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Zero), 0);
@@ -989,12 +978,10 @@ mod test {
     #[test]
     fn test_inx() {
         let cpu = CPU::test_prog(vec![0xa2, 0x13, 0xe8, 0x00]);
-
         assert_eq!(cpu.reg_x, 0x14);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Overflow), 0);
 
         let cpu = CPU::test_prog(vec![0xa2, 0xff, 0xe8, 0x00]);
-
         assert_eq!(cpu.reg_x, 0x00);
         assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Overflow), 0);
     }
@@ -1002,14 +989,95 @@ mod test {
     #[test]
     fn test_iny() {
         let cpu = CPU::test_prog(vec![0xa0, 0x13, 0xc8, 0x00]);
-
         assert_eq!(cpu.reg_y, 0x14);
         assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Overflow), 0);
 
         let cpu = CPU::test_prog(vec![0xa0, 0xff, 0xc8, 0x00]);
-
         assert_eq!(cpu.reg_y, 0x00);
         assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Overflow), 0);
+    }
+
+    #[test]
+    fn test_jmp_and_branches() {
+        // Jump
+        let cpu = CPU::test_prog(vec![0xe8, 0x4c, 0x06, 0x80, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x03);
+        assert_eq!(cpu.reg_pc, 0x8009);
+        
+        // Carry set
+        let cpu = CPU::test_prog(vec![0x38, 0xb0, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x02);
+        assert_eq!(cpu.reg_pc, 0x8008);
+
+        let cpu = CPU::test_prog(vec![0xea, 0xb0, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x01);
+        assert_eq!(cpu.reg_pc, 0x8005);
+
+        // Carry clear
+        let cpu = CPU::test_prog(vec![0x38, 0x90, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x01);
+        assert_eq!(cpu.reg_pc, 0x8005);
+
+        let cpu = CPU::test_prog(vec![0xea, 0x90, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x02);
+        assert_eq!(cpu.reg_pc, 0x8008);
+
+        
+
+        // Negative set
+        let cpu = CPU::test_prog(vec![0xa2, 0xff, 0x30, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x01);
+        assert_eq!(cpu.reg_pc, 0x8009);
+
+        let cpu = CPU::test_prog(vec![0xea, 0xea, 0x30, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x01);
+        assert_eq!(cpu.reg_pc, 0x8006);
+
+        // Negative clear
+        let cpu = CPU::test_prog(vec![0xa2, 0xff, 0x10, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x00);
+        assert_eq!(cpu.reg_pc, 0x8006);
+
+        let cpu = CPU::test_prog(vec![0xea, 0xea, 0x10, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x02);
+        assert_eq!(cpu.reg_pc, 0x8009);
+
+        // Zero set
+        let cpu = CPU::test_prog(vec![0xa2, 0x00, 0xf0, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x02);
+        assert_eq!(cpu.reg_pc, 0x8009);
+
+        let cpu = CPU::test_prog(vec![0xea, 0xea, 0xf0, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x01);
+        assert_eq!(cpu.reg_pc, 0x8006);
+
+        // Zero clear
+        let cpu = CPU::test_prog(vec![0xa2, 0x00, 0xd0, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x01);
+        assert_eq!(cpu.reg_pc, 0x8006);
+
+        let cpu = CPU::test_prog(vec![0xea, 0xea, 0xd0, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x02);
+        assert_eq!(cpu.reg_pc, 0x8009);
+
+        // Overflow set
+        let cpu = CPU::test_prog(vec![0xa9, 0x7f, 0x69, 0x7f, 0x70, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x02);
+        assert_eq!(cpu.reg_pc, 0x800b);
+
+        let cpu = CPU::test_prog(vec![0xea, 0xea, 0xea, 0xea, 0x70, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x01);
+        assert_eq!(cpu.reg_pc, 0x8008);
+
+        // Overflow clear
+        let cpu = CPU::test_prog(vec![0xa9, 0x7f, 0x69, 0x7f, 0x50, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x01);
+        assert_eq!(cpu.reg_pc, 0x8008);
+        
+        let cpu = CPU::test_prog(vec![0xea, 0xea, 0xea, 0xea, 0x50, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x02);
+        assert_eq!(cpu.reg_pc, 0x800b);
+
     }
     
 
