@@ -677,9 +677,7 @@ impl CPU {
         todo!("To implement !");
     }
 
-    fn nop(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
-    }
+    fn nop(&mut self, _addressmode: AddressingMode) {}
 
     // Logical or between a value and Accumulator
     fn ora(&mut self, addressmode: AddressingMode) {
