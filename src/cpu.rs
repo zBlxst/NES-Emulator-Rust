@@ -499,6 +499,15 @@ impl CPU {
 
         }
     }
+
+    fn jump_rel(&mut self, offset: u8) {
+        if offset & CPU::mask_from_flag(CPUFlag::Negative) != 0 {
+            self.reg_pc = self.reg_pc.wrapping_sub(256 - offset as u16);
+        } else {
+            self.reg_pc = self.reg_pc.wrapping_add(offset as u16);
+        }
+
+    }
     
     fn no_bind_yet(&mut self, _addressmode: AddressingMode) {
        todo!("This opcode is not binded yet !")
@@ -558,17 +567,26 @@ impl CPU {
 
     // Branch on carry clear
     fn bcc(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !")
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        if !self.get_flag(CPUFlag::Carry) {
+            self.jump_rel(self.mem_read_u8(pos));
+        }
     }
 
     // Branch on carry set
     fn bcs(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        if self.get_flag(CPUFlag::Carry) {
+            self.jump_rel(self.mem_read_u8(pos));
+        }
     }
 
     // Branch on equal
     fn beq(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        if self.get_flag(CPUFlag::Zero) {
+            self.jump_rel(self.mem_read_u8(pos));
+        }
     }
 
     // Bit test
@@ -578,17 +596,26 @@ impl CPU {
 
     // Branch on minus
     fn bmi(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        if self.get_flag(CPUFlag::Negative) {
+            self.jump_rel(self.mem_read_u8(pos));
+        }
     }
 
     // Branch on not equal
     fn bne(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        if !self.get_flag(CPUFlag::Zero) {
+            self.jump_rel(self.mem_read_u8(pos));
+        }
     }
 
     // Branch on plus
     fn bpl(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        if !self.get_flag(CPUFlag::Negative) {
+            self.jump_rel(self.mem_read_u8(pos));
+        }
     }
 
     // Force break
@@ -598,12 +625,18 @@ impl CPU {
 
     // Branch on overflow clear
     fn bvc(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        if !self.get_flag(CPUFlag::Overflow) {
+            self.jump_rel(self.mem_read_u8(pos));
+        }
     }
 
     // Branch on overflow set
     fn bvs(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        if self.get_flag(CPUFlag::Overflow) {
+            self.jump_rel(self.mem_read_u8(pos));
+        }
     }
 
     // Clear carry flag
