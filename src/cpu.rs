@@ -1,4 +1,4 @@
-use cast::{u8, u16};
+use cast::u8;
 
 #[derive(Debug)]
 pub struct CPU {
@@ -333,6 +333,8 @@ impl CPU {
     // ============================= API =================================
     // ===================================================================
 
+    const STACK_BASE: u16 = 0x0100;
+
     pub fn new() -> Self {
         CPU {
             reg_pc : 0,
@@ -351,7 +353,7 @@ impl CPU {
 
     // Handles little endian
     fn mem_read_u16(&self, addr: u16) -> u16 {
-        u16(self.memory[addr.wrapping_add(1) as usize]) << 8 | u16(self.memory[addr as usize])
+        (self.memory[addr.wrapping_add(1) as usize] as u16) << 8 | (self.memory[addr as usize] as u16)
     }
 
     fn mem_write_u8(&mut self, addr: u16, value: u8) {
@@ -361,7 +363,7 @@ impl CPU {
     // Handles little endian
     fn mem_write_u16(&mut self, addr: u16, value: u16) {
         self.memory[addr as usize] = u8(value & 0xff).expect("The logical and of the value and 0xff didn't work for cast (this should never happend)");
-        self.memory[addr.wrapping_add(1) as usize] = u8(value >> 8).expect("The logical right shift of the value and 0xff didn't work for cast (this should never happend)");
+        self.memory[addr.wrapping_add(1) as usize] = u8(value >> 8).expect("The logical right shift of the value and 8 didn't work for cast (this should never happend)");
     }
 
     pub fn reset(&mut self) {
@@ -495,7 +497,27 @@ impl CPU {
         } else {
             self.reg_pc = self.reg_pc.wrapping_add(offset as u16);
         }
+    }
 
+    fn stack_push_u8(&mut self, value: u8) {
+        self.mem_write_u8(CPU::STACK_BASE + self.reg_sp as u16, value);
+        self.reg_sp = self.reg_sp.wrapping_sub(1);
+    }
+
+    fn stack_pop_u8(&mut self) -> u8 {
+        self.reg_sp = self.reg_sp.wrapping_sub(1);
+        self.mem_read_u8(CPU::STACK_BASE + self.reg_sp as u16)   
+    }
+
+    fn stack_push_u16(&mut self, value: u16) {
+        self.stack_push_u8(u8(value & 0xff).expect("The logical and of the value and 0xff didn't work for cast (this should never happend)"));
+        self.stack_push_u8(u8(value >> 8).expect("The logical right shift of the value and 8 didn't work for cast (this should never happend)"));
+    }
+
+    fn stack_pop_u16(&mut self) -> u16 {
+        let low = self.stack_pop_u8();
+        let high = self.stack_pop_u8();
+        (high as u16) << 8 | low as u16
     }
     
     fn no_bind_yet(&mut self, _addressmode: AddressingMode) {
@@ -754,7 +776,14 @@ impl CPU {
 
     // Jump to a subroutine
     fn jsr(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+
+        // We add two to handle the 3-bit sized instruction 
+        self.stack_push_u16(self.reg_pc + 3);
+
+        // Substracts 3 to balance the +3 after the instruction
+        // We still have to check if the compiler/assembler doesn't already handles it
+        self.reg_pc = self.mem_read_u16(pos).wrapping_sub(3);
     }
 
     // Loads operand into Accumulator
@@ -817,23 +846,23 @@ impl CPU {
     }
 
     // Push Accumulator on stack
-    fn pha(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+    fn pha(&mut self, _addressmode: AddressingMode) {
+        self.stack_push_u8(self.reg_a);
     }
 
     // Push Processor status on stack
-    fn php(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+    fn php(&mut self, _addressmode: AddressingMode) {
+        self.stack_push_u8(self.status);
     }
 
     // Pull Accumulator from stack
-    fn pla(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+    fn pla(&mut self, _addressmode: AddressingMode) {
+        self.reg_a = self.stack_pop_u8();
     }
 
     // Pull Processor status from stack
-    fn plp(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+    fn plp(&mut self, _addressmode: AddressingMode) {
+        self.status = self.stack_pop_u8();
     }
 
     // Rotate left
@@ -897,13 +926,20 @@ impl CPU {
     }
 
     // Return from interrupt
-    fn rti(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+    fn rti(&mut self, _addressmode: AddressingMode) {
+        self.status = self.stack_pop_u8();
+
+        // Substracts 1 to balance the +1 after the instruction
+        // We still have to check if the compiler/assembler doesn't already handles it
+        self.reg_pc = self.stack_pop_u16().wrapping_sub(1);
     }
 
     // Return from subroutine
-    fn rts(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+    fn rts(&mut self, _addressmode: AddressingMode) {
+
+        // Substracts 1 to balance the +1 after the instruction
+        // We still have to check if the compiler/assembler doesn't already handles it
+        self.reg_pc = self.stack_pop_u16().wrapping_sub(1);
     }
 
     // Subtract with carry
