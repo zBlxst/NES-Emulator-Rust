@@ -551,6 +551,8 @@ impl CPU {
         }
         self.put_flag(CPUFlag::Carry, overflowing);
         self.update_n_flag(res);
+
+        // On nesdev it says if A = 0 but on doc it says if res = 0 
         self.update_z_flag(res);
     }
 
@@ -781,7 +783,27 @@ impl CPU {
 
     // Logical shift right
     fn lsr(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let old_value: u8;
+        let res: u8;
+        match addressmode {
+            AddressingMode::Accumulator => {
+                old_value = self.reg_a;
+                res = old_value / 2;
+                self.reg_a = res;
+                
+            }
+            _ => {
+                let pos: u16 = self.get_address_from_mode(addressmode);
+                old_value = self.mem_read_u8(pos);
+                res = old_value / 2;
+                self.mem_write_u8(pos, res);
+            }
+        }
+        self.put_flag(CPUFlag::Carry, old_value & 0b0000_0001 != 0);
+        self.update_n_flag(res);
+
+        // On nesdev it says if A = 0 but on doc it says if res = 0 
+        self.update_z_flag(res);
     }
 
     fn nop(&mut self, _addressmode: AddressingMode) {}
@@ -816,12 +838,62 @@ impl CPU {
 
     // Rotate left
     fn rol(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let overflowing: bool;
+        let mut res: u8;
+        match addressmode {
+            AddressingMode::Accumulator => {
+                (res, overflowing) = self.reg_a.overflowing_mul(2);
+                if self.get_flag(CPUFlag::Carry) {
+                    res |= 0b0000_0001;
+                }
+                self.reg_a = res;
+                
+            }
+            _ => {
+                let pos: u16 = self.get_address_from_mode(addressmode);
+                (res, overflowing) = self.mem_read_u8(pos).overflowing_mul(2);
+                if self.get_flag(CPUFlag::Carry) {
+                    res |= 0b0000_0001;
+                }
+                self.mem_write_u8(pos, res);
+            }
+        }
+        self.put_flag(CPUFlag::Carry, overflowing);
+        self.update_n_flag(res);
+
+        // On nesdev it says if A = 0 but on doc it says if res = 0 
+        self.update_z_flag(res);
     }
 
     // Rotate right
     fn ror(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let old_value: u8;
+        let mut res: u8;
+        match addressmode {
+            AddressingMode::Accumulator => {
+                old_value = self.reg_a;
+                res = old_value / 2;
+                if self.get_flag(CPUFlag::Carry) {
+                    res |= 0b1000_0000;
+                }
+                self.reg_a = res;
+                
+            }
+            _ => {
+                let pos: u16 = self.get_address_from_mode(addressmode);
+                old_value = self.mem_read_u8(pos);
+                res = old_value / 2;
+                if self.get_flag(CPUFlag::Carry) {
+                    res |= 0b1000_0000;
+                }
+                self.mem_write_u8(pos, res);
+            }
+        }
+        self.put_flag(CPUFlag::Carry, old_value & 0b0000_0001 != 0);
+        self.update_n_flag(res);
+
+        // On nesdev it says if A = 0 but on doc it says if res = 0 
+        self.update_z_flag(res);
     }
 
     // Return from interrupt
@@ -1049,8 +1121,6 @@ mod test {
         assert_eq!(cpu.reg_x, 0x02);
         assert_eq!(cpu.reg_pc, 0x8008);
 
-        
-
         // Negative set
         let cpu = CPU::test_prog(vec![0xa2, 0xff, 0x30, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
         assert_eq!(cpu.reg_x, 0x01);
@@ -1109,6 +1179,86 @@ mod test {
         let cpu = CPU::test_prog(vec![0xa2, 0x00, 0xf0, 0xfd, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
         assert_eq!(cpu.reg_x, 0x00);
         assert_eq!(cpu.reg_pc, 0x8002);
+
+    }
+
+    #[test]
+    fn test_shifts() {
+        // ASL
+        let cpu = CPU::test_prog(vec![0xa9, 0b0010_1000, 0x0a, 0x00]);
+        assert_eq!(cpu.reg_a, 0b0101_0000);
+        assert!(!cpu.get_flag(CPUFlag::Carry));
+        assert!(!cpu.get_flag(CPUFlag::Zero));
+        assert!(!cpu.get_flag(CPUFlag::Negative));
+
+        let cpu = CPU::test_prog(vec![0xa9, 0b1110_1000, 0x0a, 0x00]);
+        assert_eq!(cpu.reg_a, 0b1101_0000);
+        assert!(cpu.get_flag(CPUFlag::Carry));
+        assert!(!cpu.get_flag(CPUFlag::Zero));
+        assert!(cpu.get_flag(CPUFlag::Negative));
+
+        // LSR
+        let cpu = CPU::test_prog(vec![0xa9, 0b0010_1000, 0x4a, 0x00]);
+        assert_eq!(cpu.reg_a, 0b0001_0100);
+        assert!(!cpu.get_flag(CPUFlag::Carry));
+        assert!(!cpu.get_flag(CPUFlag::Zero));
+        assert!(!cpu.get_flag(CPUFlag::Negative));
+
+        let cpu = CPU::test_prog(vec![0xa9, 0b0010_1001, 0x4a, 0x00]);
+        assert_eq!(cpu.reg_a, 0b0001_0100);
+        assert!(cpu.get_flag(CPUFlag::Carry));
+        assert!(!cpu.get_flag(CPUFlag::Zero));
+        assert!(!cpu.get_flag(CPUFlag::Negative));
+
+        // ROL
+        let cpu = CPU::test_prog(vec![0xa9, 0b0010_1000, 0x2a, 0x00]);
+        assert_eq!(cpu.reg_a, 0b0101_0000);
+        assert!(!cpu.get_flag(CPUFlag::Carry));
+        assert!(!cpu.get_flag(CPUFlag::Zero));
+        assert!(!cpu.get_flag(CPUFlag::Negative));
+
+        let cpu = CPU::test_prog(vec![0xa9, 0b1110_1000, 0x2a, 0x00]);
+        assert_eq!(cpu.reg_a, 0b1101_0000);
+        assert!(cpu.get_flag(CPUFlag::Carry));
+        assert!(!cpu.get_flag(CPUFlag::Zero));
+        assert!(cpu.get_flag(CPUFlag::Negative));
+
+        let cpu = CPU::test_prog(vec![0x38, 0xa9, 0b0010_1000, 0x2a, 0x00]);
+        assert_eq!(cpu.reg_a, 0b0101_0001);
+        assert!(!cpu.get_flag(CPUFlag::Carry));
+        assert!(!cpu.get_flag(CPUFlag::Zero));
+        assert!(!cpu.get_flag(CPUFlag::Negative));
+
+        let cpu = CPU::test_prog(vec![0x38, 0xa9, 0b1110_1000, 0x2a, 0x00]);
+        assert_eq!(cpu.reg_a, 0b1101_0001);
+        assert!(cpu.get_flag(CPUFlag::Carry));
+        assert!(!cpu.get_flag(CPUFlag::Zero));
+        assert!(cpu.get_flag(CPUFlag::Negative));
+
+        // ROR
+        let cpu = CPU::test_prog(vec![0xa9, 0b0010_1000, 0x6a, 0x00]);
+        assert_eq!(cpu.reg_a, 0b0001_0100);
+        assert!(!cpu.get_flag(CPUFlag::Carry));
+        assert!(!cpu.get_flag(CPUFlag::Zero));
+        assert!(!cpu.get_flag(CPUFlag::Negative));
+
+        let cpu = CPU::test_prog(vec![0xa9, 0b0010_1001, 0x6a, 0x00]);
+        assert_eq!(cpu.reg_a, 0b0001_0100);
+        assert!(cpu.get_flag(CPUFlag::Carry));
+        assert!(!cpu.get_flag(CPUFlag::Zero));
+        assert!(!cpu.get_flag(CPUFlag::Negative));
+
+        let cpu = CPU::test_prog(vec![0x38, 0xa9, 0b0010_1000, 0x6a, 0x00]);
+        assert_eq!(cpu.reg_a, 0b1001_0100);
+        assert!(!cpu.get_flag(CPUFlag::Carry));
+        assert!(!cpu.get_flag(CPUFlag::Zero));
+        assert!(cpu.get_flag(CPUFlag::Negative));
+
+        let cpu = CPU::test_prog(vec![0x38, 0xa9, 0b0010_1001, 0x6a, 0x00]);
+        assert_eq!(cpu.reg_a, 0b1001_0100);
+        assert!(cpu.get_flag(CPUFlag::Carry));
+        assert!(!cpu.get_flag(CPUFlag::Zero));
+        assert!(cpu.get_flag(CPUFlag::Negative));
 
     }
     
