@@ -370,7 +370,7 @@ impl CPU {
         self.reg_a = 0;
         self.reg_x = 0;
         self.reg_y = 0;
-        self.reg_sp = 0;
+        self.reg_sp = 0xff;
         self.status = 0;
 
         self.reg_pc = self.mem_read_u16(0xfffc);
@@ -505,7 +505,7 @@ impl CPU {
     }
 
     fn stack_pop_u8(&mut self) -> u8 {
-        self.reg_sp = self.reg_sp.wrapping_sub(1);
+        self.reg_sp = self.reg_sp.wrapping_add(1);
         self.mem_read_u8(CPU::STACK_BASE + self.reg_sp as u16)   
     }
 
@@ -515,9 +515,16 @@ impl CPU {
     }
 
     fn stack_pop_u16(&mut self) -> u16 {
-        let low = self.stack_pop_u8();
         let high = self.stack_pop_u8();
+        let low = self.stack_pop_u8();
         (high as u16) << 8 | low as u16
+    }
+
+    #[allow(dead_code)]
+    fn show_stack(&self) {
+        for i in 0x00..0xff {
+            println!("0x{:02x}: {:02x}", i, self.memory[(CPU::STACK_BASE + i) as usize]);
+        }
     }
     
     fn no_bind_yet(&mut self, _addressmode: AddressingMode) {
@@ -858,6 +865,8 @@ impl CPU {
     // Pull Accumulator from stack
     fn pla(&mut self, _addressmode: AddressingMode) {
         self.reg_a = self.stack_pop_u8();
+        self.update_n_flag(self.reg_a);
+        self.update_z_flag(self.reg_a);
     }
 
     // Pull Processor status from stack
@@ -1357,7 +1366,29 @@ mod test {
         assert_eq!(cpu.reg_a, 0xb9);
         assert!(!cpu.get_flag(CPUFlag::Overflow));
         assert!(!cpu.get_flag(CPUFlag::Carry));
+    }
 
+    #[test]
+    fn test_stack() {
+        // PHA and PLA
+        let cpu = CPU::test_prog(vec![0xa9, 0x18, 0x48, 0xa9, 0x12, 0x48, 0xa9, 0xff, 0x68, 0xaa, 0x68, 0xa8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x12);
+        assert_eq!(cpu.reg_y, 0x18);
+
+        // JSR and RTS
+        let cpu = CPU::test_prog(vec![0xe8, 0x20, 0x05, 0x80, 0x00, 0xe8, 0xe8, 0x60, 0x00]);
+        cpu.show_stack();
+        assert_eq!(cpu.reg_x, 0x03);
+        assert_eq!(cpu.reg_pc, 0x8005);
+    }
+
+
+    #[test]
+    fn test_misc() {
+        // Call a function that adds X and Y to A
+        let cpu = CPU::test_prog(vec![0xa2, 0x12, 0xa0, 0x34, 0x20, 0x0a, 0x80, 0x00, 0xa9, 0x00, 0x86, 0x00, 0x98, 0x65, 0x00, 0x60, 0x00]);
+        assert_eq!(cpu.reg_a, 0x46);
+        assert_eq!(cpu.reg_pc, 0x8008);
     }
     
 
