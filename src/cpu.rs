@@ -478,17 +478,11 @@ impl CPU {
                 let addr: u16 = self.mem_read_u16(pos as u16);
                 addr.wrapping_add(self.reg_y as u16)
             }
-
-            AddressingMode::Implied => {
-                panic!("Mode : {:?} is not supported", mode);
-            }
             AddressingMode::Indirect => {
-                panic!("Mode : {:?} is not supported", mode);
+                self.mem_read_u16(self.reg_pc.wrapping_add(1))
             }
-            AddressingMode::Accumulator => {
-                panic!("Mode : {:?} is not supported", mode);
-            }
-            AddressingMode::NoneAddressing => {
+            
+            AddressingMode::Accumulator | AddressingMode::Implied | AddressingMode::NoneAddressing => {
                 panic!("Mode : {:?} is not supported", mode);
             }
 
@@ -1003,6 +997,10 @@ mod test {
         let cpu = CPU::test_prog(vec![0xe8, 0x4c, 0x06, 0x80, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
         assert_eq!(cpu.reg_x, 0x03);
         assert_eq!(cpu.reg_pc, 0x8009);
+
+        let cpu = CPU::test_prog(vec![0xe8, 0x30, 0x03, 0x6c, 0xfc, 0xff, 0x00]);
+        assert_eq!(cpu.reg_x, 0x80);
+        assert_eq!(cpu.reg_pc, 0x8007);
         
         // Carry set
         let cpu = CPU::test_prog(vec![0x38, 0xb0, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
@@ -1077,6 +1075,11 @@ mod test {
         let cpu = CPU::test_prog(vec![0xea, 0xea, 0xea, 0xea, 0x50, 0x02, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
         assert_eq!(cpu.reg_x, 0x02);
         assert_eq!(cpu.reg_pc, 0x800b);
+
+        // Negative branching
+        let cpu = CPU::test_prog(vec![0xa2, 0x00, 0xf0, 0xfd, 0xe8, 0x00, 0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.reg_x, 0x00);
+        assert_eq!(cpu.reg_pc, 0x8002);
 
     }
     
