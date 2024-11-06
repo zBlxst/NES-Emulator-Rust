@@ -481,7 +481,7 @@ impl CPU {
             AddressingMode::Indirect => {
                 self.mem_read_u16(self.reg_pc.wrapping_add(1))
             }
-            
+
             AddressingMode::Accumulator | AddressingMode::Implied | AddressingMode::NoneAddressing => {
                 panic!("Mode : {:?} is not supported", mode);
             }
@@ -580,7 +580,11 @@ impl CPU {
 
     // Bit test
     fn bit(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        let value: u8 = self.mem_read_u8(pos);
+        self.put_flag(CPUFlag::Zero, value & self.reg_a == 0);
+        self.put_flag(CPUFlag::Overflow, value & CPU::mask_from_flag(CPUFlag::Overflow) == 1);
+        self.put_flag(CPUFlag::Negative, value & CPU::mask_from_flag(CPUFlag::Negative) == 1);
     }
 
     // Branch on minus
@@ -650,17 +654,29 @@ impl CPU {
 
     // Compare
     fn cmp(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        let to_compare: u8 = self.mem_read_u8(pos);
+        self.put_flag(CPUFlag::Carry, self.reg_a >= to_compare);
+        self.put_flag(CPUFlag::Zero, self.reg_a == to_compare);
+        self.put_flag(CPUFlag::Negative, self.reg_a <= to_compare);
     }
 
     // Compare X register
     fn cpx(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        let to_compare: u8 = self.mem_read_u8(pos);
+        self.put_flag(CPUFlag::Carry, self.reg_x >= to_compare);
+        self.put_flag(CPUFlag::Zero, self.reg_x == to_compare);
+        self.put_flag(CPUFlag::Negative, self.reg_x <= to_compare);
     }
 
     // Compare Y register
     fn cpy(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        let to_compare: u8 = self.mem_read_u8(pos);
+        self.put_flag(CPUFlag::Carry, self.reg_y >= to_compare);
+        self.put_flag(CPUFlag::Zero, self.reg_y == to_compare);
+        self.put_flag(CPUFlag::Negative, self.reg_y <= to_compare);
     }
 
     // Decrement memory
