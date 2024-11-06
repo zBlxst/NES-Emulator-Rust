@@ -499,7 +499,7 @@ impl CPU {
     }
     
     fn no_bind_yet(&mut self, _addressmode: AddressingMode) {
-       todo!("This opcode is not binded yet !")
+       panic!("This opcode is not binded yet !")
     }
 
     // Add with carry
@@ -908,7 +908,26 @@ impl CPU {
 
     // Subtract with carry
     fn sbc(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let carry: u8 = { if self.get_flag(CPUFlag::Carry) {0} else {1} };
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        let overflowed: bool;
+        let overflowed2: bool;
+
+        let base_a: u8 = self.reg_a;
+        let to_sub: u8 = self.mem_read_u8(pos);
+
+        (self.reg_a, overflowed) = self.reg_a.overflowing_sub(to_sub);
+        (self.reg_a, overflowed2) = self.reg_a.overflowing_sub(carry);
+        
+        self.put_flag(CPUFlag::Carry, !(overflowed | overflowed2));
+        self.update_n_flag(self.reg_a);
+        self.update_z_flag(self.reg_a);
+
+        // Set overflow if we add two positive (negative) integers which result to a negative (positive) integer
+        // First parenthesis has MSB set if base_a and to_add have the different MSB (+/- or -/+)
+        // Second parenthesis has MSB set if base_a and the result have different MSB (+/- or -/+)
+        // They are both set if we substract a negative to a positive and result is negative (or the contrary)
+        self.put_flag(CPUFlag::Overflow, ((base_a ^ to_sub) & (base_a ^ self.reg_a) & 0b1000_0000) != 0);
     }
 
     // Set carry flag
@@ -1259,6 +1278,49 @@ mod test {
         assert!(cpu.get_flag(CPUFlag::Carry));
         assert!(!cpu.get_flag(CPUFlag::Zero));
         assert!(cpu.get_flag(CPUFlag::Negative));
+
+    }
+
+    #[test]
+    fn test_adc_sbc() {
+        // ADC
+        let cpu = CPU::test_prog(vec![0xa9, 0x18, 0x69, 0x12, 0x00]);
+        assert_eq!(cpu.reg_a, 0x2a);
+        assert!(!cpu.get_flag(CPUFlag::Overflow));
+
+        let cpu = CPU::test_prog(vec![0xa9, 0x81, 0x69, 0xc8, 0x00]);
+        assert_eq!(cpu.reg_a, 0x49);
+        assert!(cpu.get_flag(CPUFlag::Overflow));
+
+        let cpu = CPU::test_prog(vec![0xa9, 0x51, 0x69, 0x7f, 0x00]);
+        assert_eq!(cpu.reg_a, 0xd0);
+        assert!(cpu.get_flag(CPUFlag::Overflow));
+        assert!(cpu.get_flag(CPUFlag::Negative));
+
+        let cpu = CPU::test_prog(vec![0x38, 0xa9, 0x81, 0x69, 0xc8, 0x00]);
+        assert_eq!(cpu.reg_a, 0x4a);
+        assert!(cpu.get_flag(CPUFlag::Overflow));
+        assert!(cpu.get_flag(CPUFlag::Carry));
+
+        // SBC
+        let cpu = CPU::test_prog(vec![0xa9, 0x18, 0xe9, 0x12, 0x00]);
+        assert_eq!(cpu.reg_a, 0x05);
+        assert!(!cpu.get_flag(CPUFlag::Overflow));
+
+        let cpu = CPU::test_prog(vec![0xa9, 0x81, 0xe9, 0xc8, 0x00]);
+        assert_eq!(cpu.reg_a, 0xb8);
+        assert!(!cpu.get_flag(CPUFlag::Overflow));
+        assert!(cpu.get_flag(CPUFlag::Negative));
+
+        let cpu = CPU::test_prog(vec![0xa9, 0x51, 0xe9, 0x80, 0x00]);
+        assert_eq!(cpu.reg_a, 0xd0);
+        assert!(cpu.get_flag(CPUFlag::Overflow));
+        assert!(cpu.get_flag(CPUFlag::Negative));
+
+        let cpu = CPU::test_prog(vec![0x38, 0xa9, 0x81, 0xe9, 0xc8, 0x00]);
+        assert_eq!(cpu.reg_a, 0xb9);
+        assert!(!cpu.get_flag(CPUFlag::Overflow));
+        assert!(!cpu.get_flag(CPUFlag::Carry));
 
     }
     
