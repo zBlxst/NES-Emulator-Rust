@@ -681,17 +681,26 @@ impl CPU {
 
     // Decrement memory
     fn dec(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        let value: u8 = self.mem_read_u8(pos).wrapping_sub(1);
+        self.mem_write_u8(pos, value);
+        self.update_n_flag(value);
+        self.update_z_flag(value);
     }
 
     // Decrement X register
-    fn dex(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+    fn dex(&mut self, _addressmode: AddressingMode) {
+        self.reg_x = self.reg_x.wrapping_sub(1);
+        self.update_n_flag(self.reg_x);
+        self.update_z_flag(self.reg_x);
+
     }
 
     // Decrement Y register
-    fn dey(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+    fn dey(&mut self, _addressmode: AddressingMode) {
+        self.reg_y = self.reg_y.wrapping_sub(1);
+        self.update_n_flag(self.reg_y);
+        self.update_z_flag(self.reg_y);
     }
 
     // Exclusive or
@@ -705,7 +714,11 @@ impl CPU {
 
     // Increment memory
     fn inc(&mut self, addressmode: AddressingMode) {
-        todo!("To implement !");
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        let value: u8 = self.mem_read_u8(pos).wrapping_add(1);
+        self.mem_write_u8(pos, value);
+        self.update_n_flag(value);
+        self.update_z_flag(value);
     }
 
     // Increment X register
