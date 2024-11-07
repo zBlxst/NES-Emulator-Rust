@@ -34,16 +34,3 @@ A rudimentary Nintendo Entertainment System (NES) emulator that can run NES ROMs
 2. Low-level programming
 
 3. Hardware Interfaces
-
-
-
-
-
-
-
-
-
-TODO
-
-/!\ Note: this project is not validated yet, because all we (the teachers) have is a title.
-Please provide a detailed description of the project here, and get back to the teachers for review and validation.
