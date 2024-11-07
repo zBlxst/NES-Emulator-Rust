@@ -4,9 +4,9 @@ fn main() {
     println!("Hello, world!");
     let mut cpu : CPU = CPU::new();
 
-    let program : Vec<u8> = vec![0xa9, 0xc0, 0x00];
-    println!("{:?}", cpu);
+    let program : Vec<u8> = vec![0xa2, 0x12, 0xa0, 0x34, 0x20, 0x0a, 0x80, 0x00, 0xa9, 0x00, 0x86, 0x00, 0x98, 0x65, 0x00, 0x60, 0x00];
+    cpu.show_stack();
     cpu.load_and_run(&program);
-    println!("{:?}", cpu);
+    cpu.show_stack();
 
 }

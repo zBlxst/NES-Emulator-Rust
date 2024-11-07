@@ -89,16 +89,23 @@ impl CPU {
     }
 
     pub fn run(&mut self) {
-       loop {
+       self.run_with_callback(|_| {});
+    }
+
+    pub fn run_with_callback<F>(&mut self, mut callback: F)
+    where F: FnMut(&mut CPU) {
+        loop {
+            callback(self);
+
             let opcode: u8 = self.mem_read_u8(self.reg_pc);
             println!("opcode {:?} at {:x}", opcode, self.reg_pc);
             OPCODES[opcode as usize].exec(self);
             if self.status & CPU::mask_from_flag(CPUFlag::Break) != 0 {
                 break;
             }
-        }
-        println!("Execution is over !\n");
-    }
+         }
+         println!("Execution is over !\n");
+     }
     
     // ===================================================================
     // ======================== FLAG MANIPULATION ========================
@@ -220,9 +227,8 @@ impl CPU {
         (high as u16) << 8 | low as u16
     }
 
-    #[allow(dead_code)]
-    fn show_stack(&self) {
-        for i in 0x00..0xff {
+    pub fn show_stack(&self) {
+        for i in 0x00..0x100 {
             println!("0x{:02x}: {:02x}", i, self.memory[(CPU::STACK_BASE + i) as usize]);
         }
     }
