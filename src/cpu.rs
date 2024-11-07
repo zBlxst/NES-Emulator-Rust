@@ -334,6 +334,7 @@ impl CPU {
     // ===================================================================
 
     const STACK_BASE: u16 = 0x0100;
+    const PROGRAM_BASE: u16 = 0x8000;
 
     pub fn new() -> Self {
         CPU {
@@ -377,8 +378,8 @@ impl CPU {
     }
 
     fn load_program(&mut self, program: &Vec<u8>) {
-        self.memory[0x8000 .. (0x8000 + program.len())].copy_from_slice(&program[..]);
-        self.mem_write_u16(0xfffc, 0x8000);
+        self.memory[(CPU::PROGRAM_BASE as usize) .. ((CPU::PROGRAM_BASE as usize) + program.len())].copy_from_slice(&program[..]);
+        self.mem_write_u16(0xfffc, CPU::PROGRAM_BASE);
     }
 
     pub fn load_and_run(&mut self, program: &Vec<u8>) {
