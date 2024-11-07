@@ -3,6 +3,14 @@ name = "nes_emul"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "nes_emul"
+path = "src/main.rs"
+
+[lib]
+name = "nes_emul"
+path = "src/lib.rs"
+
 [dependencies]
 cast = "0.3.0"
 once_cell = "1.20.2"

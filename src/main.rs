@@ -1,7 +1,4 @@
-pub mod cpu;
-
-use cpu::CPU;
-
+use nes_emul::cpu::CPU;
 
 fn main() {
     println!("Hello, world!");
