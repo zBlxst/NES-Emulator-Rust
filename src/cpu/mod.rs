@@ -6,13 +6,15 @@ use opcode::{OPCODES, AddressingMode};
 
 #[derive(Debug)]
 pub struct CPU {
-    pub reg_pc : u16,
-    pub reg_sp : u8,
-    pub reg_a  : u8,
-    pub reg_x  : u8,
-    pub reg_y  : u8,
-    pub status : u8,
-    pub memory : [u8; 0xffff]
+    pub reg_pc          : u16,
+    pub reg_sp          : u8,
+    pub reg_a           : u8,
+    pub reg_x           : u8,
+    pub reg_y           : u8,
+    pub status          : u8,
+    pub memory          : [u8; 0xffff],
+    pub stack_base      : u16, 
+    pub program_base    : u16
 }
 
 #[derive(Debug)]
@@ -32,9 +34,6 @@ impl CPU {
     // ============================= API =================================
     // ===================================================================
 
-    const STACK_BASE: u16 = 0x0100;
-    const PROGRAM_BASE: u16 = 0x8000;
-
     pub fn new() -> Self {
         CPU {
             reg_pc : 0,
@@ -44,24 +43,26 @@ impl CPU {
             reg_y  : 0,
             status : 0,
             memory : [0; 0xffff],
+            stack_base : 0x0100,
+            program_base : 0x8000
         }
     }
 
-    fn mem_read_u8(&self, addr: u16) -> u8 {
+    pub fn mem_read_u8(&self, addr: u16) -> u8 {
         self.memory[addr as usize]
     }
 
     // Handles little endian
-    fn mem_read_u16(&self, addr: u16) -> u16 {
+    pub fn mem_read_u16(&self, addr: u16) -> u16 {
         (self.memory[addr.wrapping_add(1) as usize] as u16) << 8 | (self.memory[addr as usize] as u16)
     }
 
-    fn mem_write_u8(&mut self, addr: u16, value: u8) {
+    pub fn mem_write_u8(&mut self, addr: u16, value: u8) {
         self.memory[addr as usize] = value;
     }
 
     // Handles little endian
-    fn mem_write_u16(&mut self, addr: u16, value: u16) {
+    pub fn mem_write_u16(&mut self, addr: u16, value: u16) {
         self.memory[addr as usize] = u8(value & 0xff).expect("The logical and of the value and 0xff didn't work for cast (this should never happend)");
         self.memory[addr.wrapping_add(1) as usize] = u8(value >> 8).expect("The logical right shift of the value and 8 didn't work for cast (this should never happend)");
     }
@@ -76,9 +77,9 @@ impl CPU {
         self.reg_pc = self.mem_read_u16(0xfffc);
     }
 
-    fn load_program(&mut self, program: &Vec<u8>) {
-        self.memory[(CPU::PROGRAM_BASE as usize) .. ((CPU::PROGRAM_BASE as usize) + program.len())].copy_from_slice(&program[..]);
-        self.mem_write_u16(0xfffc, CPU::PROGRAM_BASE);
+    pub fn load_program(&mut self, program: &Vec<u8>) {
+        self.memory[(self.program_base as usize) .. ((self.program_base as usize) + program.len())].copy_from_slice(&program[..]);
+        self.mem_write_u16(0xfffc, self.program_base);
     }
 
     pub fn load_and_run(&mut self, program: &Vec<u8>) {
@@ -98,7 +99,7 @@ impl CPU {
             callback(self);
 
             let opcode: u8 = self.mem_read_u8(self.reg_pc);
-            println!("opcode {:?} at {:x}", opcode, self.reg_pc);
+            // println!("opcode {:?} at {:x}", opcode, self.reg_pc);
             OPCODES[opcode as usize].exec(self);
             if self.status & CPU::mask_from_flag(CPUFlag::Break) != 0 {
                 break;
@@ -207,13 +208,13 @@ impl CPU {
     }
 
     fn stack_push_u8(&mut self, value: u8) {
-        self.mem_write_u8(CPU::STACK_BASE + self.reg_sp as u16, value);
+        self.mem_write_u8(self.stack_base + self.reg_sp as u16, value);
         self.reg_sp = self.reg_sp.wrapping_sub(1);
     }
 
     fn stack_pop_u8(&mut self) -> u8 {
         self.reg_sp = self.reg_sp.wrapping_add(1);
-        self.mem_read_u8(CPU::STACK_BASE + self.reg_sp as u16)   
+        self.mem_read_u8(self.stack_base + self.reg_sp as u16)   
     }
 
     fn stack_push_u16(&mut self, value: u16) {
@@ -229,7 +230,7 @@ impl CPU {
 
     pub fn show_stack(&self) {
         for i in 0x00..0x100 {
-            println!("0x{:02x}: {:02x}", i, self.memory[(CPU::STACK_BASE + i) as usize]);
+            println!("0x{:02x}: {:02x}", i, self.memory[(self.stack_base + i) as usize]);
         }
     }
     
@@ -440,7 +441,6 @@ impl CPU {
         self.update_z_flag(self.reg_y);
     }
 
-    // Exclusive or
     // Logical xor between a value and Accumulator
     fn eor(&mut self, addressmode: AddressingMode) {
         let pos: u16 = self.get_address_from_mode(addressmode);
@@ -479,11 +479,9 @@ impl CPU {
     }
 
     // Jump to a spectified address
-    fn jmp(&mut self, addressmode: AddressingMode) {// Does not match other functions prototype
+    fn jmp(&mut self, addressmode: AddressingMode) {
         let pos: u16 = self.get_address_from_mode(addressmode);
-        println!("Pos : {:x}", pos);
         // Substracts 3 to balance the +3 after the instruction
-        // We still have to check if the compiler/assembler doesn't already handles it
         self.reg_pc = self.mem_read_u16(pos).wrapping_sub(3);
     }
 
@@ -495,7 +493,6 @@ impl CPU {
         self.stack_push_u16(self.reg_pc + 3);
 
         // Substracts 3 to balance the +3 after the instruction
-        // We still have to check if the compiler/assembler doesn't already handles it
         self.reg_pc = self.mem_read_u16(pos).wrapping_sub(3);
     }
 
@@ -645,7 +642,6 @@ impl CPU {
         self.status = self.stack_pop_u8();
 
         // Substracts 1 to balance the +1 after the instruction
-        // We still have to check if the compiler/assembler doesn't already handles it
         self.reg_pc = self.stack_pop_u16().wrapping_sub(1);
     }
 
@@ -653,7 +649,6 @@ impl CPU {
     fn rts(&mut self, _addressmode: AddressingMode) {
 
         // Substracts 1 to balance the +1 after the instruction
-        // We still have to check if the compiler/assembler doesn't already handles it
         self.reg_pc = self.stack_pop_u16().wrapping_sub(1);
     }
 
