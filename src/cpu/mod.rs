@@ -1,4 +1,4 @@
-use cast::u8;
+use crate::error::Error;
 
 pub mod opcode;
 use opcode::{OPCODES, AddressingMode};
@@ -48,6 +48,13 @@ impl CPU {
         }
     }
 
+    pub fn set_program_base(&mut self, addr: u16) -> Result<(), Error>{
+        (addr < 0x2000)
+            .then(|| { self.program_base = addr })
+            .ok_or_else(|| Error::CpuError(String::from("The start of the program cannot exceed 0x2000")))
+         
+    }
+
     pub fn mem_read_u8(&self, addr: u16) -> u8 {
         self.memory[addr as usize]
     }
@@ -63,8 +70,8 @@ impl CPU {
 
     // Handles little endian
     pub fn mem_write_u16(&mut self, addr: u16, value: u16) {
-        self.memory[addr as usize] = u8(value & 0xff).expect("The logical and of the value and 0xff didn't work for cast (this should never happend)");
-        self.memory[addr.wrapping_add(1) as usize] = u8(value >> 8).expect("The logical right shift of the value and 8 didn't work for cast (this should never happend)");
+        self.memory[addr as usize] = (value & 0xff) as u8;
+        self.memory[addr.wrapping_add(1) as usize] = (value >> 8) as u8;
     }
 
     pub fn reset(&mut self) {
@@ -77,16 +84,22 @@ impl CPU {
         self.reg_pc = self.mem_read_u16(0xfffc);
     }
 
-    pub fn load_program(&mut self, program: &Vec<u8>) {
-        self.memory[(self.program_base as usize) .. ((self.program_base as usize) + program.len())].copy_from_slice(&program[..]);
-        self.mem_write_u16(0xfffc, self.program_base);
+    // We should check the size of the program
+    pub fn load_program(&mut self, program: &Vec<u8>) -> Result<(), Error>{
+        if self.program_base as usize + program.len() > 0x2000 {
+            return Err(Error::CpuError(String::from("The program cannot exceed 0x2000 (end of CPU RAM)")));
+        }
+            self.memory[(self.program_base as usize) .. ((self.program_base as usize) + program.len())].copy_from_slice(&program[..]);
+            self.mem_write_u16(0xfffc, self.program_base);
+        Ok(())
     }
 
-    pub fn load_and_run(&mut self, program: &Vec<u8>) {
-        self.load_program(program);
+    pub fn load_and_run(&mut self, program: &Vec<u8>) -> Result<(), Error> {
+        self.load_program(program)?;
         self.reset();
         // println!("{:?}", self);
         self.run();
+        Ok(())
     }
 
     pub fn run(&mut self) {
@@ -218,8 +231,8 @@ impl CPU {
     }
 
     fn stack_push_u16(&mut self, value: u16) {
-        self.stack_push_u8(u8(value & 0xff).expect("The logical and of the value and 0xff didn't work for cast (this should never happend)"));
-        self.stack_push_u8(u8(value >> 8).expect("The logical right shift of the value and 8 didn't work for cast (this should never happend)"));
+        self.stack_push_u8((value & 0xff) as u8);
+        self.stack_push_u8((value >> 8) as u8);
     }
 
     fn stack_pop_u16(&mut self) -> u16 {

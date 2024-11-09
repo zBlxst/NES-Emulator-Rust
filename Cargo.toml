@@ -12,6 +12,7 @@ name = "nes_emul"
 path = "src/lib.rs"
 
 [dependencies]
-cast = "0.3.0"
 sdl2 = "0.34.0"
 rand = "=0.7.3"
+thiserror = "2.0.1"
+anyhow = "1.0.93"

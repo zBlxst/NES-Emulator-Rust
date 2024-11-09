@@ -1,3 +1,4 @@
+use anyhow::{Error, Result};
 use nes_emul::cpu::CPU;
 
 use sdl2::event::Event;
@@ -61,28 +62,33 @@ fn read_screen_state(cpu: &CPU, frame: &mut [u8; 32 * 3 * 32]) -> bool {
 }   
 
 
-fn main() {
+fn main() -> Result<()>{
     println!("Hello, world!");
 
-    let sdl_context: Sdl = sdl2::init().unwrap();
-    let video_subsystem: VideoSubsystem = sdl_context.video().unwrap();
+    // ================================ Graphics Initialization ==================================
+    let sdl_context: Sdl = sdl2::init().map_err(Error::msg)?;
+    let video_subsystem: VideoSubsystem = sdl_context.video().map_err(Error::msg)?;
     let window: Window = video_subsystem
         .window("NES Emulator", (32*SCALE_FACTOR) as u32, (32*SCALE_FACTOR) as u32)
         .position_centered()
-        .build().unwrap();
+        .build()?;
 
-    let mut canvas: Canvas<Window> = window.into_canvas().present_vsync().build().unwrap();
-    let mut event_pump: EventPump = sdl_context.event_pump().unwrap();
+    let mut canvas: Canvas<Window> = window.into_canvas().present_vsync().build()?;
+    let mut event_pump: EventPump = sdl_context.event_pump().map_err(Error::msg)?;
 
-    canvas.set_scale(SCALE_FACTOR as f32, SCALE_FACTOR as f32).unwrap();
+    canvas.set_scale(SCALE_FACTOR as f32, SCALE_FACTOR as f32).map_err(Error::msg)?;
 
     let creator: TextureCreator<WindowContext> = canvas.texture_creator();
-    let mut texture: Texture<'_> = creator.create_texture_target(PixelFormatEnum::RGB24, 32, 32).unwrap();
-    
+    let mut texture: Texture<'_> = creator.create_texture_target(PixelFormatEnum::RGB24, 32, 32)?;
+
+
+
+
+    // ================================== CPU initialization ========================================
     let mut cpu: CPU = CPU::new();
 
     // This is specific to the snake game
-    cpu.program_base = 0x0600;
+    cpu.set_program_base(0x0600)?;
 
     let game_code: Vec<u8> = vec![
         0x20, 0x06, 0x06, 0x20, 0x38, 0x06, 0x20, 0x0d, 0x06, 0x20, 0x2a, 0x06, 0x60, 0xa9, 0x02, 0x85,
@@ -106,18 +112,20 @@ fn main() {
         0xa6, 0x03, 0xa9, 0x00, 0x81, 0x10, 0xa2, 0x00, 0xa9, 0x01, 0x81, 0x10, 0x60, 0xa2, 0x00, 0xea,
         0xea, 0xca, 0xd0, 0xfb, 0x60
     ];
-    cpu.load_program(&game_code);
+    cpu.load_program(&game_code)?;
     cpu.reset();
 
     let mut screen_state: [u8; 32 * 3 * 32] = [0 as u8; 32 * 3 * 32];
     let mut rng = rand::thread_rng();
 
+
+    // =============================== Game Loop ======================================
     cpu.run_with_callback(move |mut cpu: &mut CPU| {
         handle_user_input(&mut cpu, &mut event_pump);
         cpu.mem_write_u8(0xfe, rng.gen_range(1, 16));
         if read_screen_state(&mut cpu, &mut screen_state) {
-            texture.update(None, &screen_state, 32*3).unwrap();
-            canvas.copy(&texture, None, None).unwrap();
+            texture.update(None, &screen_state, 32*3).map_err(|e| println!("{e}")).ok();
+            canvas.copy(&texture, None, None).map_err(|e| println!("{e}")).ok();
             canvas.present();
         }
         ::std::thread::sleep(std::time::Duration::new(0, 10_000));
@@ -125,5 +133,6 @@ fn main() {
     
     // cpu.show_stack();
     // cpu.show_stack();
+    Ok(())
 
 }
