@@ -302,5 +302,161 @@ pub static OPCODES: [Opcode; 256] = {
     // TYA
     instructions[0x98] = Opcode{instruction : CPU::tya, address_mode : AddressingMode::Implied, inst_size : 1};
 
+    // =================================================================================================================
+    // ========================================== Unofficial Opcodes ===================================================
+    // =================================================================================================================
+
+    // AAC
+    instructions[0x0b] = Opcode{instruction : CPU::aac, address_mode : AddressingMode::Immediate, inst_size : 2};
+    instructions[0x2b] = Opcode{instruction : CPU::aac, address_mode : AddressingMode::Immediate, inst_size : 2};
+
+    // AAX
+    instructions[0x87] = Opcode{instruction : CPU::aax, address_mode : AddressingMode::ZeroPage, inst_size : 2};
+    instructions[0x97] = Opcode{instruction : CPU::aax, address_mode : AddressingMode::ZeroPageY, inst_size : 2};
+    instructions[0x83] = Opcode{instruction : CPU::aax, address_mode : AddressingMode::IndirectX, inst_size : 2};
+    instructions[0x8f] = Opcode{instruction : CPU::aax, address_mode : AddressingMode::Absolute, inst_size : 3};
+
+    // ARR
+    instructions[0x6b] = Opcode{instruction : CPU::arr, address_mode : AddressingMode::Immediate, inst_size : 2};
+
+    // ASR
+    instructions[0x4b] = Opcode{instruction : CPU::asr, address_mode : AddressingMode::Immediate, inst_size : 2};
+
+    // ATX
+    instructions[0xab] = Opcode{instruction : CPU::atx, address_mode : AddressingMode::Immediate, inst_size : 2};
+
+    // AXA
+    instructions[0x9f] = Opcode{instruction : CPU::axa, address_mode : AddressingMode::AbsoluteY, inst_size : 3};
+
+    // AXS
+    instructions[0xcb] = Opcode{instruction : CPU::axs, address_mode : AddressingMode::Immediate, inst_size : 2};
+
+    // DCP
+    instructions[0xc7] = Opcode{instruction : CPU::dcp, address_mode : AddressingMode::ZeroPage, inst_size : 2};
+    instructions[0xd7] = Opcode{instruction : CPU::dcp, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
+    instructions[0xcf] = Opcode{instruction : CPU::dcp, address_mode : AddressingMode::Absolute, inst_size : 3};
+    instructions[0xdf] = Opcode{instruction : CPU::dcp, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
+    instructions[0xdb] = Opcode{instruction : CPU::dcp, address_mode : AddressingMode::AbsoluteY, inst_size : 3};
+    instructions[0xc3] = Opcode{instruction : CPU::dcp, address_mode : AddressingMode::IndirectX, inst_size : 2};
+    instructions[0xd3] = Opcode{instruction : CPU::dcp, address_mode : AddressingMode::IndirectY, inst_size : 2};
+
+    // DOP
+    instructions[0x04] = Opcode{instruction : CPU::dop, address_mode : AddressingMode::ZeroPage, inst_size : 2};
+    instructions[0x14] = Opcode{instruction : CPU::dop, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
+    instructions[0x34] = Opcode{instruction : CPU::dop, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
+    instructions[0x44] = Opcode{instruction : CPU::dop, address_mode : AddressingMode::ZeroPage, inst_size : 2};
+    instructions[0x54] = Opcode{instruction : CPU::dop, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
+    instructions[0x64] = Opcode{instruction : CPU::dop, address_mode : AddressingMode::ZeroPage, inst_size : 2};
+    instructions[0x74] = Opcode{instruction : CPU::dop, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
+    instructions[0x80] = Opcode{instruction : CPU::dop, address_mode : AddressingMode::Immediate, inst_size : 2};
+    instructions[0x82] = Opcode{instruction : CPU::dop, address_mode : AddressingMode::Immediate, inst_size : 2};
+    instructions[0x89] = Opcode{instruction : CPU::dop, address_mode : AddressingMode::Immediate, inst_size : 2};
+    instructions[0xc2] = Opcode{instruction : CPU::dop, address_mode : AddressingMode::Immediate, inst_size : 2};
+    instructions[0xd4] = Opcode{instruction : CPU::dop, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
+    instructions[0xe2] = Opcode{instruction : CPU::dop, address_mode : AddressingMode::Immediate, inst_size : 2};
+    instructions[0xf4] = Opcode{instruction : CPU::dop, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
+
+    // ISC
+    instructions[0xe7] = Opcode{instruction : CPU::isc, address_mode : AddressingMode::ZeroPage, inst_size : 2};
+    instructions[0xf7] = Opcode{instruction : CPU::isc, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
+    instructions[0xef] = Opcode{instruction : CPU::isc, address_mode : AddressingMode::Absolute, inst_size : 3};
+    instructions[0xff] = Opcode{instruction : CPU::isc, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
+    instructions[0xfb] = Opcode{instruction : CPU::isc, address_mode : AddressingMode::AbsoluteY, inst_size : 3};
+    instructions[0xe3] = Opcode{instruction : CPU::isc, address_mode : AddressingMode::IndirectX, inst_size : 2};
+    instructions[0xf3] = Opcode{instruction : CPU::isc, address_mode : AddressingMode::IndirectY, inst_size : 2};
+
+    // KIL
+    instructions[0x02] = Opcode{instruction : CPU::kil, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0x12] = Opcode{instruction : CPU::kil, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0x22] = Opcode{instruction : CPU::kil, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0x32] = Opcode{instruction : CPU::kil, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0x42] = Opcode{instruction : CPU::kil, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0x52] = Opcode{instruction : CPU::kil, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0x62] = Opcode{instruction : CPU::kil, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0x72] = Opcode{instruction : CPU::kil, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0x92] = Opcode{instruction : CPU::kil, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0xb2] = Opcode{instruction : CPU::kil, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0xd2] = Opcode{instruction : CPU::kil, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0xf2] = Opcode{instruction : CPU::kil, address_mode : AddressingMode::Implied, inst_size : 1};
+
+    // LAR
+    instructions[0xbb] = Opcode{instruction : CPU::lar, address_mode : AddressingMode::AbsoluteY, inst_size : 3};
+
+    // LAX
+    instructions[0xa7] = Opcode{instruction : CPU::lax, address_mode : AddressingMode::ZeroPage, inst_size : 2};
+    instructions[0xb7] = Opcode{instruction : CPU::lax, address_mode : AddressingMode::ZeroPageY, inst_size : 2};
+    instructions[0xaf] = Opcode{instruction : CPU::lax, address_mode : AddressingMode::Absolute, inst_size : 3};
+    instructions[0xbf] = Opcode{instruction : CPU::lax, address_mode : AddressingMode::AbsoluteY, inst_size : 3};
+    instructions[0xa3] = Opcode{instruction : CPU::lax, address_mode : AddressingMode::IndirectX, inst_size : 2};
+    instructions[0xb3] = Opcode{instruction : CPU::lax, address_mode : AddressingMode::IndirectY, inst_size : 2};
+
+    // NOP
+    instructions[0x1a] = Opcode{instruction : CPU::nop, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0x3a] = Opcode{instruction : CPU::nop, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0x5a] = Opcode{instruction : CPU::nop, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0x7a] = Opcode{instruction : CPU::nop, address_mode : AddressingMode::Implied, inst_size : 1};
+    instructions[0xda] = Opcode{instruction : CPU::nop, address_mode : AddressingMode::Implied, inst_size : 1};
+
+    // RLA
+    instructions[0x27] = Opcode{instruction : CPU::rla, address_mode : AddressingMode::ZeroPage, inst_size : 2};
+    instructions[0x37] = Opcode{instruction : CPU::rla, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
+    instructions[0x2f] = Opcode{instruction : CPU::rla, address_mode : AddressingMode::Absolute, inst_size : 3};
+    instructions[0x3f] = Opcode{instruction : CPU::rla, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
+    instructions[0x3b] = Opcode{instruction : CPU::rla, address_mode : AddressingMode::AbsoluteY, inst_size : 3};
+    instructions[0x23] = Opcode{instruction : CPU::rla, address_mode : AddressingMode::IndirectX, inst_size : 2};
+    instructions[0x33] = Opcode{instruction : CPU::rla, address_mode : AddressingMode::IndirectY, inst_size : 2};
+
+    // RRA
+    instructions[0x67] = Opcode{instruction : CPU::rra, address_mode : AddressingMode::ZeroPage, inst_size : 2};
+    instructions[0x77] = Opcode{instruction : CPU::rra, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
+    instructions[0x6f] = Opcode{instruction : CPU::rra, address_mode : AddressingMode::Absolute, inst_size : 3};
+    instructions[0x7f] = Opcode{instruction : CPU::rra, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
+    instructions[0x7b] = Opcode{instruction : CPU::rra, address_mode : AddressingMode::AbsoluteY, inst_size : 3};
+    instructions[0x63] = Opcode{instruction : CPU::rra, address_mode : AddressingMode::IndirectX, inst_size : 2};
+    instructions[0x73] = Opcode{instruction : CPU::rra, address_mode : AddressingMode::IndirectY, inst_size : 2};
+
+    // SBC
+    instructions[0xeb] = Opcode{instruction : CPU::sbc, address_mode : AddressingMode::Immediate, inst_size : 2};
+
+    // SLO
+    instructions[0x07] = Opcode{instruction : CPU::slo, address_mode : AddressingMode::ZeroPage, inst_size : 2};
+    instructions[0x17] = Opcode{instruction : CPU::slo, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
+    instructions[0x0f] = Opcode{instruction : CPU::slo, address_mode : AddressingMode::Absolute, inst_size : 3};
+    instructions[0x1f] = Opcode{instruction : CPU::slo, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
+    instructions[0x1b] = Opcode{instruction : CPU::slo, address_mode : AddressingMode::AbsoluteY, inst_size : 3};
+    instructions[0x03] = Opcode{instruction : CPU::slo, address_mode : AddressingMode::IndirectX, inst_size : 2};
+    instructions[0x13] = Opcode{instruction : CPU::slo, address_mode : AddressingMode::IndirectY, inst_size : 2};
+
+    // SRE
+    instructions[0x47] = Opcode{instruction : CPU::sre, address_mode : AddressingMode::ZeroPage, inst_size : 2};
+    instructions[0x57] = Opcode{instruction : CPU::sre, address_mode : AddressingMode::ZeroPageX, inst_size : 2};
+    instructions[0x4f] = Opcode{instruction : CPU::sre, address_mode : AddressingMode::Absolute, inst_size : 3};
+    instructions[0x5f] = Opcode{instruction : CPU::sre, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
+    instructions[0x5b] = Opcode{instruction : CPU::sre, address_mode : AddressingMode::AbsoluteY, inst_size : 3};
+    instructions[0x43] = Opcode{instruction : CPU::sre, address_mode : AddressingMode::IndirectX, inst_size : 2};
+    instructions[0x53] = Opcode{instruction : CPU::sre, address_mode : AddressingMode::IndirectY, inst_size : 2};
+
+    // SXA
+    instructions[0x9e] = Opcode{instruction : CPU::sxa, address_mode : AddressingMode::AbsoluteY, inst_size : 3};
+
+    // SYA
+    instructions[0x9c] = Opcode{instruction : CPU::sya, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
+
+    // TOP
+    instructions[0x0c] = Opcode{instruction : CPU::top, address_mode : AddressingMode::Absolute, inst_size : 3};
+    instructions[0x1c] = Opcode{instruction : CPU::top, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
+    instructions[0x3c] = Opcode{instruction : CPU::top, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
+    instructions[0x5c] = Opcode{instruction : CPU::top, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
+    instructions[0x7c] = Opcode{instruction : CPU::top, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
+    instructions[0xdc] = Opcode{instruction : CPU::top, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
+    instructions[0xfc] = Opcode{instruction : CPU::top, address_mode : AddressingMode::AbsoluteX, inst_size : 3};
+
+    // XAA
+    instructions[0x8b] = Opcode{instruction : CPU::xaa, address_mode : AddressingMode::Immediate, inst_size : 2};
+
+    // XAS
+    instructions[0x9b] = Opcode{instruction : CPU::xas, address_mode : AddressingMode::AbsoluteY, inst_size : 3};
+
+
     instructions
 };
