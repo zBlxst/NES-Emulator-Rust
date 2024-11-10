@@ -1,4 +1,4 @@
-use crate::cpu::CPU;
+use super::CPU;
 
 #[derive(Copy, Clone, Debug)]
 pub enum AddressingMode {
