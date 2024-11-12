@@ -2,8 +2,8 @@ use crate::error::Error;
 
 pub mod opcode;
 pub mod instruction;
-pub mod mem;
-use mem::Mem;
+
+use crate::mem::Mem;
 use opcode::{OPCODES, AddressingMode};
 mod test;
 
