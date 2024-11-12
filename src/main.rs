@@ -1,5 +1,6 @@
 use anyhow::{Error, Result};
 use nes_emul::cpu::CPU;
+use nes_emul::cpu::mem::Mem;
 
 use sdl2::event::Event;
 use sdl2::render::Canvas;
