@@ -81,8 +81,9 @@ impl CPU {
 
     pub fn show_stack(&self) {
         for i in 0x00..0x100 {
-            println!("0x{:02x}: {:02x}", i, self.memory[(self.stack_base + i) as usize]);
+            println!("0x{:02x}: {:02x}", i, self.mem_read_u8(self.stack_base + i))
         }
+       
     }
     
     // ======================== FLAG MANIPULATION ========================

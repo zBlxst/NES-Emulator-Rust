@@ -4,10 +4,10 @@ pub mod opcode;
 pub mod instruction;
 
 use crate::mem::Mem;
-use crate::bus::Bus;
+use crate::bus::{Bus, PROGRAM_BASE_POINTER};
+use crate::rom::Rom;
 use opcode::{OPCODES, AddressingMode};
 mod test;
-
 
 
 #[derive(Debug)]
@@ -50,8 +50,8 @@ impl CPU {
     // ============================= API =================================
     // ===================================================================
 
-    pub fn new() -> Self {
-        CPU {
+    pub fn new(rom: Rom) -> Self {
+        let mut res: CPU = CPU {
             reg_pc : 0,
             reg_sp : 0,
             reg_a  : 0,
@@ -60,13 +60,15 @@ impl CPU {
             status : 0,
             stack_base : 0x0100,
             program_base : 0x8000,
-            bus: Bus::new(),
-        }
+            bus: Bus::new(rom),
+        };
+        res.bus.rom_write_program_base(res.program_base);
+        res
     }
 
     pub fn set_program_base(&mut self, addr: u16) -> Result<(), Error>{
         (addr < 0x2000 || addr > 0x8000)
-            .then(|| { self.program_base = addr })
+            .then(|| { self.program_base = addr; self.bus.rom_write_program_base(self.program_base); })
             .ok_or_else(|| Error::CpuError(String::from("The start of the program cannot exceed 0x2000")))
          
     }
@@ -78,26 +80,26 @@ impl CPU {
         self.reg_sp = 0xff;
         self.status = 0;
 
-        self.reg_pc = self.mem_read_u16(0xfffc);
+        self.reg_pc = self.mem_read_u16(PROGRAM_BASE_POINTER);
     }
 
     // We should check the size of the program
-    pub fn load_program(&mut self, program: &Vec<u8>) -> Result<(), Error>{
-        // if self.program_base as usize + program.len() > 0x2000 {
-        //     return Err(Error::CpuError(String::from("The program cannot exceed 0x2000 (end of CPU RAM)")));
-        // }
-        // self.memory[(self.program_base as usize) .. ((self.program_base as usize) + program.len())].copy_from_slice(&program[..]);
-        self.mem_write_u16(0xfffc, self.program_base);
-        Ok(())
-    }
+    // pub fn load_program(&mut self, program: &Vec<u8>) -> Result<(), Error>{
+    //     // if self.program_base as usize + program.len() > 0x2000 {
+    //     //     return Err(Error::CpuError(String::from("The program cannot exceed 0x2000 (end of CPU RAM)")));
+    //     // }
+    //     // self.memory[(self.program_base as usize) .. ((self.program_base as usize) + program.len())].copy_from_slice(&program[..]);
+    //     self.mem_write_u16(PROGRAM_BASE_POINTER, self.program_base);
+    //     Ok(())
+    // }
 
-    pub fn load_and_run(&mut self, program: &Vec<u8>) -> Result<(), Error> {
-        self.load_program(program)?;
-        self.reset();
-        // println!("{:?}", self);
-        self.run();
-        Ok(())
-    }
+    // pub fn load_and_run(&mut self, program: &Vec<u8>) -> Result<(), Error> {
+    //     self.load_program(program)?;
+    //     self.reset();
+    //     // println!("{:?}", self);
+    //     self.run();
+    //     Ok(())
+    // }
 
     pub fn run(&mut self) {
        self.run_with_callback(|_| {});

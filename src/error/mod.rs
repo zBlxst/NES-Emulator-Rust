@@ -9,4 +9,7 @@ pub enum Error {
     //example to wrap other crates' errors
     #[error(transparent)]
     WindowError(#[from] sdl2::video::WindowBuildError),
+
+    #[error("Rom Error: {0}")]
+    RomError(String),
 }
