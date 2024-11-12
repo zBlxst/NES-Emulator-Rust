@@ -4,6 +4,7 @@ pub mod opcode;
 pub mod instruction;
 
 use crate::mem::Mem;
+use crate::bus::Bus;
 use opcode::{OPCODES, AddressingMode};
 mod test;
 
@@ -17,9 +18,9 @@ pub struct CPU {
     pub reg_x           : u8,
     pub reg_y           : u8,
     pub status          : u8,
-    pub memory          : [u8; 0xffff],
     pub stack_base      : u16, 
-    pub program_base    : u16
+    pub program_base    : u16,
+    pub bus             : Bus,
 }
 
 #[derive(Debug)]
@@ -35,11 +36,11 @@ pub enum CPUFlag {
 
 impl Mem for CPU {
     fn mem_read_u8(&self, addr: u16) -> u8 {
-        self.memory[addr as usize]
+        self.bus.mem_read_u8(addr)
     }
 
     fn mem_write_u8(&mut self, addr: u16, value: u8) {
-        self.memory[addr as usize] = value;
+        self.bus.mem_write_u8(addr, value);
     }
 }
 
@@ -57,9 +58,9 @@ impl CPU {
             reg_x  : 0,
             reg_y  : 0,
             status : 0,
-            memory : [0; 0xffff],
             stack_base : 0x0100,
-            program_base : 0x8000
+            program_base : 0x8000,
+            bus: Bus::new(),
         }
     }
 
@@ -85,7 +86,7 @@ impl CPU {
         // if self.program_base as usize + program.len() > 0x2000 {
         //     return Err(Error::CpuError(String::from("The program cannot exceed 0x2000 (end of CPU RAM)")));
         // }
-        self.memory[(self.program_base as usize) .. ((self.program_base as usize) + program.len())].copy_from_slice(&program[..]);
+        // self.memory[(self.program_base as usize) .. ((self.program_base as usize) + program.len())].copy_from_slice(&program[..]);
         self.mem_write_u16(0xfffc, self.program_base);
         Ok(())
     }
