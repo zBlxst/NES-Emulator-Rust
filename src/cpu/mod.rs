@@ -2,6 +2,8 @@ use crate::error::Error;
 
 pub mod opcode;
 pub mod instruction;
+pub mod mem;
+use mem::Mem;
 use opcode::{OPCODES, AddressingMode};
 mod test;
 
@@ -31,6 +33,16 @@ pub enum CPUFlag {
     Carry,
 }
 
+impl Mem for CPU {
+    fn mem_read_u8(&self, addr: u16) -> u8 {
+        self.memory[addr as usize]
+    }
+
+    fn mem_write_u8(&mut self, addr: u16, value: u8) {
+        self.memory[addr as usize] = value;
+    }
+}
+
 impl CPU {
 
     // ===================================================================
@@ -56,25 +68,6 @@ impl CPU {
             .then(|| { self.program_base = addr })
             .ok_or_else(|| Error::CpuError(String::from("The start of the program cannot exceed 0x2000")))
          
-    }
-
-    pub fn mem_read_u8(&self, addr: u16) -> u8 {
-        self.memory[addr as usize]
-    }
-
-    // Handles little endian
-    pub fn mem_read_u16(&self, addr: u16) -> u16 {
-        (self.memory[addr.wrapping_add(1) as usize] as u16) << 8 | (self.memory[addr as usize] as u16)
-    }
-
-    pub fn mem_write_u8(&mut self, addr: u16, value: u8) {
-        self.memory[addr as usize] = value;
-    }
-
-    // Handles little endian
-    pub fn mem_write_u16(&mut self, addr: u16, value: u16) {
-        self.memory[addr as usize] = (value & 0xff) as u8;
-        self.memory[addr.wrapping_add(1) as usize] = (value >> 8) as u8;
     }
 
     pub fn reset(&mut self) {
