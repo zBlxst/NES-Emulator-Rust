@@ -104,7 +104,7 @@ fn main() -> Result<()> {
 
 
     // =============================== Game Loop ======================================
-    cpu.run_with_callback(move |mut cpu: &mut CPU| {
+    cpu.run_with_callback_debug(move |mut cpu: &mut CPU| {
         handle_user_input(&mut cpu, &mut event_pump);
         cpu.mem_write_u8(0xfe, rng.gen_range(1, 16));
         if read_screen_state(&mut cpu, &mut screen_state) {

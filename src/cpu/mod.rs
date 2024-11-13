@@ -51,7 +51,7 @@ impl CPU {
     // ===================================================================
 
     pub fn new(rom: Rom) -> Self {
-        let mut res: CPU = CPU {
+        CPU {
             reg_pc : 0,
             reg_sp : 0,
             reg_a  : 0,
@@ -61,13 +61,11 @@ impl CPU {
             stack_base : 0x0100,
             program_base : 0x8000,
             bus: Bus::new(rom),
-        };
-        res.bus.rom_write_program_base(res.program_base);
-        res
+        }
     }
 
     pub fn set_program_base(&mut self, addr: u16) -> Result<(), Error>{
-        (addr < 0x2000 || addr > 0x8000)
+        (addr < 0x2000 || addr >= 0x8000)
             .then(|| { self.program_base = addr; self.bus.rom_write_program_base(self.program_base); })
             .ok_or_else(|| Error::CpuError(String::from("The start of the program cannot exceed 0x2000")))
          
@@ -105,6 +103,10 @@ impl CPU {
        self.run_with_callback(|_| {});
     }
 
+    pub fn run_debug(&mut self) {
+        self.run_with_callback_debug(|_| {});
+     }
+
     pub fn run_with_callback<F>(&mut self, mut callback: F)
     where F: FnMut(&mut CPU) {
         loop {
@@ -116,9 +118,24 @@ impl CPU {
             if self.status & CPU::mask_from_flag(CPUFlag::Break) != 0 {
                 break;
             }
-         }
-         println!("Execution is over !\n");
-     }
+        }
+        println!("Execution is over !\n");
+    }
+
+    pub fn run_with_callback_debug<F>(&mut self, mut callback: F)
+    where F: FnMut(&mut CPU) {
+        loop {
+            callback(self);
+
+            let opcode: u8 = self.mem_read_u8(self.reg_pc);
+            println!("opcode {:?} at {:x}", opcode, self.reg_pc);
+            OPCODES[opcode as usize].exec(self);
+            if self.status & CPU::mask_from_flag(CPUFlag::Break) != 0 {
+                break;
+            }
+        }
+        println!("Execution is over !\n");
+    }
    
      
 }
