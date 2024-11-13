@@ -60,6 +60,7 @@ name = "nes_emul"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bitflags",
  "rand",
  "sdl2",
  "thiserror",

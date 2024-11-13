@@ -9,7 +9,7 @@ impl CPU {
     //==================================================================================
  
     // Implementation of addressing modes
-    fn get_address_from_mode(&self, mode: AddressingMode) -> u16 {
+    fn get_address_from_mode(&mut self, mode: AddressingMode) -> u16 {
         match mode {
             AddressingMode::Immediate | AddressingMode::Absolute | AddressingMode::Relative => self.reg_pc.wrapping_add(1),
             AddressingMode::ZeroPage => self.mem_read_u8(self.reg_pc.wrapping_add(1)) as u16,
@@ -79,7 +79,7 @@ impl CPU {
         (high as u16) << 8 | low as u16
     }
 
-    pub fn show_stack(&self) {
+    pub fn show_stack(&mut self) {
         for i in 0x00..0x100 {
             println!("0x{:02x}: {:02x}", i, self.mem_read_u8(self.stack_base + i))
         }
@@ -198,7 +198,8 @@ impl CPU {
     pub(super) fn bcc(&mut self, addressmode: AddressingMode) {
         let pos: u16 = self.get_address_from_mode(addressmode);
         if !self.get_flag(CPUFlag::Carry) {
-            self.jump_rel(self.mem_read_u8(pos));
+            let offset: u8 = self.mem_read_u8(pos);
+            self.jump_rel(offset);
         }
     }
 
@@ -206,7 +207,8 @@ impl CPU {
     pub(super) fn bcs(&mut self, addressmode: AddressingMode) {
         let pos: u16 = self.get_address_from_mode(addressmode);
         if self.get_flag(CPUFlag::Carry) {
-            self.jump_rel(self.mem_read_u8(pos));
+            let offset: u8 = self.mem_read_u8(pos);
+            self.jump_rel(offset);
         }
     }
 
@@ -214,7 +216,8 @@ impl CPU {
     pub(super) fn beq(&mut self, addressmode: AddressingMode) {
         let pos: u16 = self.get_address_from_mode(addressmode);
         if self.get_flag(CPUFlag::Zero) {
-            self.jump_rel(self.mem_read_u8(pos));
+            let offset: u8 = self.mem_read_u8(pos);
+            self.jump_rel(offset);
         }
     }
 
@@ -231,7 +234,8 @@ impl CPU {
     pub(super) fn bmi(&mut self, addressmode: AddressingMode) {
         let pos: u16 = self.get_address_from_mode(addressmode);
         if self.get_flag(CPUFlag::Negative) {
-            self.jump_rel(self.mem_read_u8(pos));
+            let offset: u8 = self.mem_read_u8(pos);
+            self.jump_rel(offset);
         }
     }
 
@@ -239,7 +243,8 @@ impl CPU {
     pub(super) fn bne(&mut self, addressmode: AddressingMode) {
         let pos: u16 = self.get_address_from_mode(addressmode);
         if !self.get_flag(CPUFlag::Zero) {
-            self.jump_rel(self.mem_read_u8(pos));
+            let offset: u8 = self.mem_read_u8(pos);
+            self.jump_rel(offset);
         }
     }
 
@@ -247,7 +252,8 @@ impl CPU {
     pub(super) fn bpl(&mut self, addressmode: AddressingMode) {
         let pos: u16 = self.get_address_from_mode(addressmode);
         if !self.get_flag(CPUFlag::Negative) {
-            self.jump_rel(self.mem_read_u8(pos));
+            let offset: u8 = self.mem_read_u8(pos);
+            self.jump_rel(offset);
         }
     }
 
@@ -260,7 +266,8 @@ impl CPU {
     pub(super) fn bvc(&mut self, addressmode: AddressingMode) {
         let pos: u16 = self.get_address_from_mode(addressmode);
         if !self.get_flag(CPUFlag::Overflow) {
-            self.jump_rel(self.mem_read_u8(pos));
+            let offset: u8 = self.mem_read_u8(pos);
+            self.jump_rel(offset);
         }
     }
 
@@ -268,7 +275,8 @@ impl CPU {
     pub(super) fn bvs(&mut self, addressmode: AddressingMode) {
         let pos: u16 = self.get_address_from_mode(addressmode);
         if self.get_flag(CPUFlag::Overflow) {
-            self.jump_rel(self.mem_read_u8(pos));
+            let offset: u8 = self.mem_read_u8(pos);
+            self.jump_rel(offset);
         }
     }
 
@@ -753,9 +761,11 @@ impl CPU {
     // Substract 1 from mem
     pub(super) fn dcp(&mut self, _addressmode: AddressingMode) {
         let pos: u16 = self.get_address_from_mode(_addressmode);
-        self.mem_write_u8(pos, self.mem_read_u8(pos).wrapping_sub(1));
+        let to_write: u8 = self.mem_read_u8(pos).wrapping_sub(1);
+        self.mem_write_u8(pos, to_write);
 
-        self.put_flag(CPUFlag::Carry, (self.mem_read_u8(pos) & 0b0000_0001) == 0);
+        let value: bool = (self.mem_read_u8(pos) & 0b0000_0001) == 0;
+        self.put_flag(CPUFlag::Carry, value);
     }
 
     // Do nothing
@@ -765,7 +775,8 @@ impl CPU {
     // PROBABLY WRONG
     pub(super) fn isc(&mut self, _addressmode: AddressingMode) {
         let pos: u16 = self.get_address_from_mode(_addressmode);
-        self.mem_write_u8(pos, self.mem_read_u8(pos).wrapping_add(1));
+        let to_write: u8 = self.mem_read_u8(pos).wrapping_add(1);
+        self.mem_write_u8(pos, to_write);
 
         let overflow:bool;
         (self.reg_a , overflow) = self.reg_a.overflowing_sub(self.mem_read_u8(pos));
@@ -848,7 +859,8 @@ impl CPU {
         let pos: u16 = self.get_address_from_mode(_addressmode);
         let new_carry = self.mem_read_u8(pos) & 0b1000_0000 == 0b1000_0000;
 
-        self.mem_write_u8(pos, self.mem_read_u8(pos) << 1);
+        let value: u8 = self.mem_read_u8(pos) << 1;
+        self.mem_write_u8(pos, value);
 
         self.reg_a |= self.mem_read_u8(pos);
 
@@ -862,7 +874,8 @@ impl CPU {
         let pos: u16 = self.get_address_from_mode(_addressmode);
         let new_carry = self.mem_read_u8(pos) & 0b0000_0001 == 0b0000_0001;
 
-        self.mem_write_u8(pos, self.mem_read_u8(pos) >> 1);
+        let value: u8 = self.mem_read_u8(pos) >> 1;
+        self.mem_write_u8(pos, value);
 
         self.reg_a ^= self.mem_read_u8(pos);
 

@@ -20,7 +20,7 @@ pub struct Rom {
 }
 
 impl Rom {
-    pub fn new(data: &Vec<u8>) -> Result<Rom, Error> {
+    pub fn new(data: &Vec<u8>) -> Result<Self, Error> {
         // Data[0..3] => NES^Z
         // Data[4]    => Program ROM Size
         // Data[5]    => Chr ROM Size
@@ -88,7 +88,7 @@ impl Rom {
         })
     }
 
-    pub fn new_from_program_rom(data: Vec<u8>) -> Rom {
+    pub fn new_from_program_rom(data: Vec<u8>) -> Self {
         if data.len() > 0x8000 {
             panic!("The program is to huge to fit in the ROM section");
         }

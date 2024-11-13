@@ -35,7 +35,7 @@ pub enum CPUFlag {
 }
 
 impl Mem for CPU {
-    fn mem_read_u8(&self, addr: u16) -> u8 {
+    fn mem_read_u8(&mut self, addr: u16) -> u8 {
         self.bus.mem_read_u8(addr)
     }
 

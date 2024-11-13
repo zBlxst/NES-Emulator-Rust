@@ -318,7 +318,6 @@ mod test {
 
         // JSR and RTS
         let cpu = CPU::test_prog(vec![0xe8, 0x20, 0x05, 0x80, 0x00, 0xe8, 0xe8, 0x60, 0x00]);
-        cpu.show_stack();
         assert_eq!(cpu.reg_x, 0x03);
         assert_eq!(cpu.reg_pc, 0x8005);
     }
