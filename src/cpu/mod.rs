@@ -128,7 +128,7 @@ impl CPU {
             callback(self);
 
             let opcode: u8 = self.mem_read_u8(self.reg_pc);
-            println!("opcode {:?} at {:x}", opcode, self.reg_pc);
+            println!("opcode {:02x} at {:04x}", opcode, self.reg_pc);
             OPCODES[opcode as usize].exec(self);
             if self.status & CPU::mask_from_flag(CPUFlag::Break) != 0 {
                 break;
@@ -136,6 +136,7 @@ impl CPU {
         }
         println!("Execution is over !\n");
     }
+
    
      
 }
