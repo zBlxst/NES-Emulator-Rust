@@ -49,17 +49,21 @@ impl Rom {
         // ++++----- Upper part of mapper number
 
 
+        // ==================== Verification of rom format ====================
 
         if &data[0..=3] != NES_TAG {
             return Err(RomError(String::from("This is not a iNES file")))
         }
 
-        let mapper: u8 = (data[7] & 0b1111_0000) | (data[6] >> 4);
 
         let ines_version: u8 = (data[7] >> 2) & 0b11;
         if ines_version != 0b00 {
             return Err(RomError(String::from("This version of NES is not supported!")))
         }
+
+        // ==================== Extraction of data ======================
+
+        let mapper: u8 = (data[7] & 0b1111_0000) | (data[6] >> 4);
 
         let four_screen: bool = data[6] & 0b0000_1000 != 0;
         let vertical_mirroring: bool = data[6] & 0b0000_0001 != 0;
@@ -80,27 +84,29 @@ impl Rom {
         let mut program_rom: [u8; 0x8000] = [0; 0x8000];
         program_rom[..program_rom_size].copy_from_slice(&data[program_rom_start..(program_rom_start+program_rom_size)]);
 
+        
         Ok(Rom{
-            program_rom: program_rom,
+            program_rom,
             chr_rom: data[chr_rom_start..(chr_rom_start+chr_rom_size)].to_vec(),
-            mapper: mapper,
-            screen_mirroring: screen_mirroring
+            mapper,
+            screen_mirroring
         })
     }
 
-    pub fn new_from_program_rom(data: Vec<u8>) -> Self {
+    pub fn new_from_program_rom(data: Vec<u8>) -> Result<Self, Error> {
         if data.len() > 0x8000 {
-            panic!("The program is to huge to fit in the ROM section");
+            return Err(RomError(String::from("The program is too huge to fit in the ROM section")));
         }
         let mut program_rom: [u8; 0x8000] = [0; 0x8000];
         program_rom[..data.len()].copy_from_slice(&data[..data.len()]);
 
-
-        Rom {
-            program_rom: program_rom,
-            chr_rom: vec![],
-            mapper: 0,
-            screen_mirroring: Mirroring::FOURSCREEN
-        }
+        Ok(
+            Rom {
+                program_rom,
+                chr_rom: vec![],
+                mapper: 0,
+                screen_mirroring: Mirroring::FOURSCREEN
+            }
+        )
     }
 }

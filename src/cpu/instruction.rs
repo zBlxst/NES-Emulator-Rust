@@ -9,7 +9,7 @@ impl CPU {
     //==================================================================================
  
     // Implementation of addressing modes
-    fn get_address_from_mode(&mut self, mode: AddressingMode) -> u16 {
+    pub fn get_address_from_mode(&mut self, mode: AddressingMode) -> u16 {
         match mode {
             AddressingMode::Immediate | AddressingMode::Absolute | AddressingMode::Relative => self.reg_pc.wrapping_add(1),
             AddressingMode::ZeroPage => self.mem_read_u8(self.reg_pc.wrapping_add(1)) as u16,
@@ -44,7 +44,8 @@ impl CPU {
             }
 
             AddressingMode::Accumulator | AddressingMode::Implied | AddressingMode::NoneAddressing => {
-                panic!("Mode : {:?} is not supported", mode);
+                // panic!("Mode : {:?} is not supported", mode);
+                0
             }
 
         }

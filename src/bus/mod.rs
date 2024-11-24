@@ -24,7 +24,7 @@ pub const PROGRAM_ROM_END: u16 = 0xffff;
 pub const PROGRAM_BASE_POINTER: u16 = 0xfffc;
 
 
-
+// Is it possible to replace some constant 0x by const values?
 
 #[derive(Debug)]
 pub struct Bus {
@@ -61,6 +61,7 @@ impl Mem for Bus {
         }
     }
 
+    // turn panics into Errors later
     fn mem_write_u8(&mut self, addr: u16, value: u8) {
         match addr {
             CPU_RAM_START..=CPU_RAM_END => {
@@ -96,7 +97,8 @@ impl Bus {
             ppu: PPU::new(rom.chr_rom, rom.screen_mirroring)
         }
     }
-    
+
+    // is the substraction safe? might need to return err
     fn read_program_rom(&self, mut addr: u16) -> u8 {
         addr -= 0x8000;
         if self.program_rom.len() == 0x4000 && addr >= 0x4000 {

@@ -91,7 +91,8 @@ fn main() -> Result<()> {
 
     // ================================== CPU initialization ========================================
 
-    let mut file: File = File::open("rom_examples/snake.nes")?;
+    let game_path: String = String::from("rom_examples/snake.nes");
+    let mut file: File = File::open(game_path.clone())?;
     let mut data: Vec<u8> = Vec::new();
     file.read_to_end(&mut data)?;
     
@@ -104,6 +105,10 @@ fn main() -> Result<()> {
 
 
     // =============================== Game Loop ======================================
+    cpu.run_with_logs(game_path.as_str())?;
+
+
+    /*
     cpu.run_with_callback_debug(move |mut cpu: &mut CPU| {
         handle_user_input(&mut cpu, &mut event_pump);
         cpu.mem_write_u8(0xfe, rng.gen_range(1, 16));
@@ -114,6 +119,8 @@ fn main() -> Result<()> {
         }
         ::std::thread::sleep(std::time::Duration::new(0, 10_000));
     });
+     */
+
     
     // cpu.show_stack();
     // cpu.show_stack();

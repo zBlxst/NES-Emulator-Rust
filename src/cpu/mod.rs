@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use crate::error::Error;
 
 pub mod opcode;
@@ -6,8 +8,14 @@ pub mod instruction;
 use crate::mem::Mem;
 use crate::bus::{Bus, PROGRAM_BASE_POINTER};
 use crate::rom::Rom;
-use opcode::{OPCODES, AddressingMode};
+use opcode::{AddressingMode, Opcode, OPCODES};
 mod test;
+
+macro_rules! instruct_name {
+    ($func:ident) => {
+        stringify!($func).to_uppercase()
+    };
+}
 
 
 #[derive(Debug)]
@@ -98,6 +106,42 @@ impl CPU {
     //     self.run();
     //     Ok(())
     // }
+
+
+    pub fn run_with_logs(&mut self, game_path : &str) -> Result<(), Error>{
+        let mut logs : String = String::from("");
+        let path = Path::new(game_path);
+        let folder = path.parent().map(|p| p.to_str()).unwrap().unwrap();
+        let file_stem = path.file_stem().map(|s| s.to_str()).unwrap().unwrap();
+        let log_path = String::from("./") + folder + "/" + file_stem + ".log";
+
+        loop {
+            let opcode_num : u8 = self.mem_read_u8(self.reg_pc);
+            let opcode : Opcode = OPCODES[opcode_num as usize];
+            let mut cpu_state : String = format!("{:04X}  {:02X}", self.reg_pc, opcode_num);
+            let args: u16 = self.get_address_from_mode(opcode.address_mode);
+            match opcode.inst_size {
+                1 => cpu_state.push_str("      "),
+                2 => cpu_state.push_str(&format!(" {:02X}   ", (args & 0xff) as u8)),
+                3 => cpu_state.push_str(&format!(" {:02X} {:02X}", (args & 0xff) as u8, (args >> 8) as u8 )),
+                _ => println!("Should not happen")
+            }
+            //Instruction in ASM
+            cpu_state.push_str("                                  ");   
+            // Registers state, not sure about P:
+            cpu_state.push_str(&format!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}\n", self.reg_a, self.reg_x, self.reg_y, self.status,self.reg_pc));
+            logs.push_str(cpu_state.as_str());
+
+            opcode.exec(self);
+            if self.status & CPU::mask_from_flag(CPUFlag::Break) != 0 {
+                break;
+            }
+        }
+        
+        std::fs::write(log_path, logs)?;
+        println!("Execution is over !\n");
+        Ok(())
+    }
 
     pub fn run(&mut self) {
        self.run_with_callback(|_| {});

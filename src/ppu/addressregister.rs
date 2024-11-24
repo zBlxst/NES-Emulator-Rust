@@ -27,6 +27,7 @@ impl AddressingRegister {
         self.set(self.get() & 0x3fff);
     }
 
+    //TODO comment, explain 0x value
     pub fn increment(&mut self, inc: u8) {
         self.set(self.get().wrapping_add(inc as u16) & 0x3fff);
     }
