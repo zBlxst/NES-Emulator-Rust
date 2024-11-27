@@ -1,15 +1,16 @@
+pub mod opcode;
+pub mod instruction;
+mod test;
+
 use std::path::Path;
 
 use crate::error::Error;
-
-pub mod opcode;
-pub mod instruction;
-
 use crate::mem::Mem;
 use crate::bus::{Bus, PROGRAM_BASE_POINTER};
 use crate::rom::Rom;
+
 use opcode::{AddressingMode, Opcode, OPCODES};
-mod test;
+
 
 macro_rules! instruct_name {
     ($func:ident) => {

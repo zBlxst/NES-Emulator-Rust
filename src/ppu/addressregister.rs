@@ -24,10 +24,11 @@ impl AddressingRegister {
             self.value.0 = data;
         }
 
-        self.set(self.get() & 0x3fff);
+        self.set(self.get() & 0x3fff); // to mirror down the address if above 0b0011_1111_1111_1111
+
+        self.high_ptr = !self.high_ptr; // So we don't update twice the same byte of the addr
     }
 
-    //TODO comment, explain 0x value
     pub fn increment(&mut self, inc: u8) {
         self.set(self.get().wrapping_add(inc as u16) & 0x3fff);
     }
