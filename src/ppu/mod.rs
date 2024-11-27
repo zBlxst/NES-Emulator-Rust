@@ -1,11 +1,12 @@
 pub mod addressregister;
 pub mod controlregister;
+pub mod statusregister;
 
 use crate::rom::Mirroring;
 
 use addressregister::AddressingRegister;
 use controlregister::ControlRegister;
-
+use statusregister::StatusRegister;
 
 
 
@@ -22,6 +23,9 @@ const PALETTE_START: u16 = 0x3f00;
 const PALETTE_END: u16 = 0x3fff;
 
 
+const SCANLINE_NMI_TRIGGER : usize = 241;
+const SCANLINE_MAX : usize = 262;
+const SCANLINE_DURATION_IN_PPU_CYCLES : usize = 341;
 
 
 
@@ -35,8 +39,12 @@ pub struct PPU {
     pub mirroring: Mirroring,
     pub addr_reg: AddressingRegister,
     pub control_reg: ControlRegister,
+    pub oam_addr_reg: u8,
+    pub status_reg: StatusRegister,
 
     pub internal_buffer: u8,
+    pub cycles: usize,
+    pub scanline: usize,
 }
 
 impl PPU {
@@ -50,8 +58,32 @@ impl PPU {
             mirroring,
             addr_reg: AddressingRegister::new(),
             control_reg: ControlRegister::new(),
+            oam_addr_reg: 0,
+            status_reg: StatusRegister::new(),
 
             internal_buffer: 0,
+            cycles: 0,
+            scanline: 0,
+        }
+    }
+
+    pub fn tick(&mut self, ppu_cycles : usize) {
+        self.cycles += ppu_cycles;
+        if self.cycles >= SCANLINE_DURATION_IN_PPU_CYCLES {
+            self.cycles %= SCANLINE_DURATION_IN_PPU_CYCLES;
+            self.scanline +=1;
+
+            if self.scanline == SCANLINE_NMI_TRIGGER {
+                if self.control_reg.generate_vblank_nmi(){
+                    self.status_reg.set_vblank_status(true);
+                    todo!("trigger nmi intterupt")
+                }
+            }
+
+            if self.scanline >= SCANLINE_MAX{
+                self.scanline = 0;
+                self.status_reg.reset_vblank_status();
+            }
         }
     }
 
@@ -67,8 +99,17 @@ impl PPU {
         self.vram[self.addr_reg.get() as usize] = value;
     }
 
+    pub fn write_to_oam_data(&mut self, value: u8) {
+        self.oam_data[self.oam_addr_reg as usize] = value;
+        self.oam_addr_reg = self.oam_addr_reg.wrapping_add(1);
+    }
+
     fn increment_vram_addr(&mut self) {
         self.addr_reg.increment(self.control_reg.vram_addr_increment());
+    }
+
+    pub fn read_oam_data(&self) -> u8 {
+        self.oam_data[self.oam_addr_reg as usize]
     }
 
     pub fn read_data(&mut self) -> u8 {
@@ -93,11 +134,11 @@ impl PPU {
     }
 
     fn mirror_vram_addr(&self, addr: u16) -> u16 {
-        let mirrored_addr: u16 = addr & 0b0010_1111_1111_1111; // From 0x3000-0x3eff to 0x2000-0x2eff
+        let mirrored_addr: u16 = addr & 0x2fff; // From 0x3000-0x3eff to 0x2000-0x2eff
         let vram_index: u16 = mirrored_addr - VRAM_START;
         match self.mirroring {
-            Mirroring::HORIZONTAL => vram_index & 0b0000_1011_1111_1111,
-            Mirroring::VERTICAL => vram_index & 0b0000_0111_1111_1111,
+            Mirroring::HORIZONTAL => vram_index & 0x0bff,
+            Mirroring::VERTICAL => vram_index & 0x07ff,
             Mirroring::FOURSCREEN => vram_index
         }
     }

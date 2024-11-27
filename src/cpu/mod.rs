@@ -119,6 +119,9 @@ impl CPU {
         loop {
             let opcode_num : u8 = self.mem_read_u8(self.reg_pc);
             let opcode : Opcode = OPCODES[opcode_num as usize];
+
+
+            // ================ Creating logs ==================
             let mut cpu_state : String = format!("{:04X}  {:02X}", self.reg_pc, opcode_num);
             let args: u16 = self.get_address_from_mode(opcode.address_mode);
             match opcode.inst_size {
@@ -129,11 +132,13 @@ impl CPU {
             }
             //Instruction in ASM
             cpu_state.push_str("                                  ");   
-            // Registers state, not sure about P:
+            // Registers state
             cpu_state.push_str(&format!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}\n", self.reg_a, self.reg_x, self.reg_y, self.status,self.reg_pc));
             logs.push_str(cpu_state.as_str());
 
+            // =============== Execution ========================
             opcode.exec(self);
+            self.bus.tick(opcode.cpu_cycles);
             if self.status & CPU::mask_from_flag(CPUFlag::Break) != 0 {
                 break;
             }
@@ -145,43 +150,29 @@ impl CPU {
     }
 
     pub fn run(&mut self) {
-       self.run_with_callback(|_| {});
+       self.run_with_callback(|_| {}, false);
     }
 
     pub fn run_debug(&mut self) {
-        self.run_with_callback_debug(|_| {});
+        self.run_with_callback(|_| {}, true);
      }
 
-    pub fn run_with_callback<F>(&mut self, mut callback: F)
+    pub fn run_with_callback<F>(&mut self, mut callback: F, debug : bool)
     where F: FnMut(&mut CPU) {
         loop {
             callback(self);
 
-            let opcode: u8 = self.mem_read_u8(self.reg_pc);
-            // println!("opcode {:?} at {:x}", opcode, self.reg_pc);
-            OPCODES[opcode as usize].exec(self);
+            let opcode: Opcode = OPCODES[self.mem_read_u8(self.reg_pc) as usize];
+            if debug {
+                println!("opcode {:02x} at {:04x}", self.mem_read_u8(self.reg_pc), self.reg_pc);
+            }
+            opcode.exec(self);
+            self.bus.tick(opcode.cpu_cycles);
             if self.status & CPU::mask_from_flag(CPUFlag::Break) != 0 {
                 break;
             }
         }
         println!("Execution is over !\n");
     }
-
-    pub fn run_with_callback_debug<F>(&mut self, mut callback: F)
-    where F: FnMut(&mut CPU) {
-        loop {
-            callback(self);
-
-            let opcode: u8 = self.mem_read_u8(self.reg_pc);
-            println!("opcode {:02x} at {:04x}", opcode, self.reg_pc);
-            OPCODES[opcode as usize].exec(self);
-            if self.status & CPU::mask_from_flag(CPUFlag::Break) != 0 {
-                break;
-            }
-        }
-        println!("Execution is over !\n");
-    }
-
-   
      
 }

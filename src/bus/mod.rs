@@ -28,6 +28,7 @@ pub const PROGRAM_BASE_POINTER: u16 = 0xfffc;
 
 #[derive(Debug)]
 pub struct Bus {
+    cpu_cycles: usize,
     cpu_vram: [u8; 0x800],
     program_rom: [u8; 0x8000],
     ppu: PPU
@@ -36,15 +37,15 @@ pub struct Bus {
 impl Bus {
     pub fn new(rom: Rom) -> Self {
         Bus {
+            cpu_cycles: 0,
             cpu_vram: [0; 0x800],
             program_rom: rom.program_rom,
             ppu: PPU::new(rom.chr_rom, rom.screen_mirroring)
         }
     }
 
-    // is the substraction safe? might need to return err
     fn read_program_rom(&self, mut addr: u16) -> u8 {
-        addr -= 0x8000;
+        addr -= PROGRAM_ROM_START;
         if self.program_rom.len() == 0x4000 && addr >= 0x4000 {
             addr %= 0x4000;
         }
@@ -53,9 +54,14 @@ impl Bus {
     }
 
     pub fn rom_write_program_base(&mut self, program_base: u16) {
-        let pos: u16 = PROGRAM_BASE_POINTER - 0x8000;
+        let pos: u16 = PROGRAM_BASE_POINTER - PROGRAM_ROM_START;
         self.program_rom[pos as usize] = (program_base & 0xff) as u8; 
         self.program_rom[(pos+1) as usize] = (program_base >> 8) as u8; 
+    }
+
+    pub fn tick(&mut self, op_cycles : usize){
+        self.cpu_cycles += op_cycles;
+        self.ppu.tick(op_cycles * 3); // PPU runs 3 times faster than CPU
     }
 }
 
@@ -64,7 +70,7 @@ impl Mem for Bus {
     fn mem_read_u8(&mut self, addr: u16) -> u8 {
         match addr {
             CPU_RAM_START..=CPU_RAM_END => {// from 0x0000 to 0x1fff
-                let real_addr: u16 = addr & 0b00000111_11111111;
+                let real_addr: u16 = addr & 0x1fff;
                 self.cpu_vram[real_addr as usize]
             }
 
@@ -76,7 +82,7 @@ impl Mem for Bus {
             PPU_DATA_REGISTER => self.ppu.read_data(),// 0x2007
             
             PPU_REGISTERS_MIRRORING_START..=PPU_REGISTERS_MIRRORING_END => {// from 0x2000 to 0x3fff
-                let mirrored_addr: u16 = addr & 0b00100000_00000111;
+                let mirrored_addr: u16 = addr & 0x2007;
                 self.mem_read_u8(mirrored_addr)
             }
 
