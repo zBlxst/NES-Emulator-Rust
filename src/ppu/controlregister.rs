@@ -40,15 +40,43 @@ impl ControlRegister {
         ControlRegister::from_bits_truncate(0b0000_0000)
     }
 
+    pub fn nametable_addr(&self) -> u16 {
+        match self.bits & 0b11 {
+            0 => 0x2000,
+            1 => 0x2400,
+            2 => 0x2800,
+            3 => 0x2c00,
+            _ => panic!("Should not happen")
+        }
+    }
+
+    pub fn sprite_pattern_addr(&self) -> u16 {
+        if !self.contains(ControlRegister::SPRITE_PATTERN_ADDR) { 0 } else { 0x1000 }
+    }
+
+    pub fn bg_pattern_addr(&self) -> u16 {
+        if !self.contains(ControlRegister::BACKROUND_PATTERN_ADDR) { 0 } else { 0x1000 }
+    }
+
+    pub fn sprite_size(&self) -> u8 {
+        if !self.contains(ControlRegister::HEIGHT_SPRITE) { 8 } else { 11 }
+    }
+
+    pub fn master_slave_select(&self) -> u8 {
+        if !self.contains(ControlRegister::PPU_MASTER_SLAVE) { 0 } else { 1 }
+    }
+
     pub fn vram_addr_increment(&self) -> u8 {
         if !self.contains(ControlRegister::INCREMENT_VRAM_ADD) { 1 } else { 32 }
+    }
+
+    pub fn generate_vblank_nmi(&self) -> bool {
+        self.contains(ControlRegister::VBLANK_NMI_ENABLE)
     }
 
     pub fn update(&mut self, data: u8) {
         self.bits = data;
     }
 
-    pub fn generate_vblank_nmi(&self) -> bool {
-        self.contains(ControlRegister::VBLANK_NMI_ENABLE)
-    }
+    
 }

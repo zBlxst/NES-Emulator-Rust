@@ -6,8 +6,8 @@ bitflags! {
 
     pub struct MaskRegister: u8 {
         const GREYSCALE              = 0b0000_0001;
-        const SHOW_BACKGROUND        = 0b0000_0010;
-        const SHOW_SPRITES           = 0b0000_0100;
+        const LEFT_PX_BACKGROUND        = 0b0000_0010;
+        const LEFT_PX_SPRITES           = 0b0000_0100;
         const BACKGROUND_RENDERING   = 0b0000_1000;
         const SPRITE_RENDERING       = 0b0001_0000;
         const RED                    = 0b0010_0000;
@@ -33,9 +33,47 @@ bitflags! {
     
 }
 
+pub enum Color {
+    Red,
+    Green,
+    Blue
+}
+
 impl MaskRegister {
     pub fn new() -> Self {
         MaskRegister::from_bits_truncate(0b0000_0000)
+    }
+
+    pub fn is_greyscale(&self) -> bool {
+        self.contains(MaskRegister::GREYSCALE)
+    }
+
+    pub fn show_leftpixels_bg(&self) -> bool {
+        self.contains(MaskRegister::LEFT_PX_BACKGROUND)
+    }
+
+    pub fn show_leftpixels_sprite(&self) -> bool {
+        self.contains(MaskRegister::LEFT_PX_SPRITES)
+    }
+
+    pub fn show_bg(&self) -> bool {
+        self.contains(MaskRegister::BACKGROUND_RENDERING)
+    }
+
+    pub fn show_sprites(&self) -> bool {
+        self.contains(MaskRegister::SPRITE_RENDERING)
+    }
+
+    pub fn emphasize(&self) -> Vec<Color> {
+        let mut colors = vec![];
+        if self.contains(MaskRegister::BLUE) {colors.push(Color::Blue);}
+        if self.contains(MaskRegister::RED) {colors.push(Color::Red);}
+        if self.contains(MaskRegister::GREEN) {colors.push(Color::Green);}
+        colors
+    }
+
+    pub fn update(&mut self, data : u8) {
+        self.bits = data;
     }
 
 }
