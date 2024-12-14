@@ -11,7 +11,9 @@ impl CPU {
     // Implementation of addressing modes
     pub fn get_address_from_mode(&mut self, mode: AddressingMode) -> u16 {
         match mode {
-            AddressingMode::Immediate | AddressingMode::Absolute | AddressingMode::Relative => self.reg_pc.wrapping_add(1),
+            AddressingMode::Immediate => self.reg_pc.wrapping_add(1),
+            AddressingMode::Absolute => self.mem_read_u16(self.reg_pc.wrapping_add(1)),
+            AddressingMode::Relative => self.reg_pc.wrapping_add(1),
             AddressingMode::ZeroPage => self.mem_read_u8(self.reg_pc.wrapping_add(1)) as u16,
             AddressingMode::ZeroPageX => {
                 let pos: u8 = self.mem_read_u8(self.reg_pc.wrapping_add(1));
@@ -31,16 +33,27 @@ impl CPU {
             }
             AddressingMode::IndirectX => {
                 let pos: u8 = self.mem_read_u8(self.reg_pc.wrapping_add(1));
-                let addr: u16 = pos.wrapping_add(self.reg_x) as u16;
-                self.mem_read_u16(addr)
+                let addr: u8 = pos.wrapping_add(self.reg_x);
+                let low: u8 = self.mem_read_u8(addr as u16);
+                let high: u8 = self.mem_read_u8(addr.wrapping_add(1) as u16);
+                (high as u16) << 8 | (low as u16) 
             }
             AddressingMode::IndirectY => {
                 let pos: u8 = self.mem_read_u8(self.reg_pc.wrapping_add(1));
-                let addr: u16 = self.mem_read_u16(pos as u16);
+                let low: u8 = self.mem_read_u8(pos as u16);
+                let high: u8 = self.mem_read_u8(pos.wrapping_add(1) as u16);
+                let addr: u16 = (high as u16) << 8 | (low as u16);
                 addr.wrapping_add(self.reg_y as u16)
             }
             AddressingMode::Indirect => {
-                self.mem_read_u16(self.reg_pc.wrapping_add(1))
+                let pos: u16 = self.mem_read_u16(self.reg_pc.wrapping_add(1));
+                let low: u8 = (pos & 0xff) as u8;
+                let high: u8 = (pos >> 8) as u8;
+                let pos2: u16 = (high as u16) << 8 | (low.wrapping_add(1) as u16);  
+                let low: u8 = self.mem_read_u8(pos as u16);
+                let high: u8 = self.mem_read_u8(pos2 as u16);
+                (high as u16) << 8 | (low as u16)
+                
             }
 
             AddressingMode::Accumulator | AddressingMode::Implied | AddressingMode::NoneAddressing => {
@@ -70,13 +83,13 @@ impl CPU {
     }
 
     fn stack_push_u16(&mut self, value: u16) {
-        self.stack_push_u8((value & 0xff) as u8);
         self.stack_push_u8((value >> 8) as u8);
+        self.stack_push_u8((value & 0xff) as u8);
     }
 
     fn stack_pop_u16(&mut self) -> u16 {
-        let high = self.stack_pop_u8();
         let low = self.stack_pop_u8();
+        let high = self.stack_pop_u8();
         (high as u16) << 8 | low as u16
     }
 
@@ -93,6 +106,7 @@ impl CPU {
         match flag {
             CPUFlag::Negative  => 0b1000_0000,
             CPUFlag::Overflow  => 0b0100_0000,
+            CPUFlag::Break2    => 0b0010_0000,
             CPUFlag::Break     => 0b0001_0000,
             CPUFlag::Decimal   => 0b0000_1000,
             CPUFlag::Interrupt => 0b0000_0100,
@@ -227,8 +241,8 @@ impl CPU {
         let pos: u16 = self.get_address_from_mode(addressmode);
         let value: u8 = self.mem_read_u8(pos);
         self.put_flag(CPUFlag::Zero, value & self.reg_a == 0);
-        self.put_flag(CPUFlag::Overflow, value & CPU::mask_from_flag(CPUFlag::Overflow) == 1);
-        self.put_flag(CPUFlag::Negative, value & CPU::mask_from_flag(CPUFlag::Negative) == 1);
+        self.put_flag(CPUFlag::Overflow, value & CPU::mask_from_flag(CPUFlag::Overflow) != 0);
+        self.put_flag(CPUFlag::Negative, value & CPU::mask_from_flag(CPUFlag::Negative) != 0);
     }
 
     // Branch on minus
@@ -260,7 +274,7 @@ impl CPU {
 
     // Force break
     pub(super) fn brk(&mut self, _addressmode: AddressingMode) {
-        self.set_flag(CPUFlag::Break);
+        self.running = false;
     }
 
     // Branch on overflow clear
@@ -307,7 +321,7 @@ impl CPU {
         let to_compare: u8 = self.mem_read_u8(pos);
         self.put_flag(CPUFlag::Carry, self.reg_a >= to_compare);
         self.put_flag(CPUFlag::Zero, self.reg_a == to_compare);
-        self.put_flag(CPUFlag::Negative, self.reg_a <= to_compare);
+        self.put_flag(CPUFlag::Negative, ((self.reg_a.wrapping_sub(to_compare)) as i8) < 0);
     }
 
     // Compare X register
@@ -316,7 +330,7 @@ impl CPU {
         let to_compare: u8 = self.mem_read_u8(pos);
         self.put_flag(CPUFlag::Carry, self.reg_x >= to_compare);
         self.put_flag(CPUFlag::Zero, self.reg_x == to_compare);
-        self.put_flag(CPUFlag::Negative, self.reg_x <= to_compare);
+        self.put_flag(CPUFlag::Negative, ((self.reg_x.wrapping_sub(to_compare)) as i8) < 0);
     }
 
     // Compare Y register
@@ -325,7 +339,7 @@ impl CPU {
         let to_compare: u8 = self.mem_read_u8(pos);
         self.put_flag(CPUFlag::Carry, self.reg_y >= to_compare);
         self.put_flag(CPUFlag::Zero, self.reg_y == to_compare);
-        self.put_flag(CPUFlag::Negative, self.reg_y <= to_compare);
+        self.put_flag(CPUFlag::Negative, ((self.reg_y.wrapping_sub(to_compare)) as i8) < 0);
     }
 
     // Decrement memory
@@ -371,20 +385,16 @@ impl CPU {
 
     // Increment X register
     pub(super) fn inx(&mut self, _addressmode: AddressingMode) {
-        let overflowed : bool;
-        (self.reg_x, overflowed) = self.reg_x.overflowing_add(1);
+        self.reg_x = self.reg_x.wrapping_add(1);
 
-        self.put_flag(CPUFlag::Overflow, overflowed);
         self.update_n_flag(self.reg_x);
         self.update_z_flag(self.reg_x);
     }
 
     // Increment Y register
     pub(super) fn iny(&mut self, _addressmode: AddressingMode) {
-        let overflowed : bool;
-        (self.reg_y, overflowed) = self.reg_y.overflowing_add(1);
+        self.reg_y = self.reg_y.wrapping_add(1);
 
-        self.put_flag(CPUFlag::Overflow, overflowed);
         self.update_n_flag(self.reg_y);
         self.update_z_flag(self.reg_y);
     }
@@ -393,7 +403,7 @@ impl CPU {
     pub(super) fn jmp(&mut self, addressmode: AddressingMode) {
         let pos: u16 = self.get_address_from_mode(addressmode);
         // Substracts 3 to balance the +3 after the instruction
-        self.reg_pc = self.mem_read_u16(pos).wrapping_sub(3);
+        self.reg_pc = pos.wrapping_sub(3);
     }
 
     // Jump to a subroutine
@@ -401,10 +411,10 @@ impl CPU {
         let pos: u16 = self.get_address_from_mode(addressmode);
 
         // We add two to handle the 3-bit sized instruction 
-        self.stack_push_u16(self.reg_pc + 3);
+        self.stack_push_u16(self.reg_pc + 2);
 
         // Substracts 3 to balance the +3 after the instruction
-        self.reg_pc = self.mem_read_u16(pos).wrapping_sub(3);
+        self.reg_pc = pos.wrapping_sub(3);
     }
 
     // Loads operand into Accumulator
@@ -473,7 +483,10 @@ impl CPU {
 
     // Push Processor status on stack
     pub(super) fn php(&mut self, _addressmode: AddressingMode) {
-        self.stack_push_u8(self.status);
+        let mut flags: u8 = self.status.clone();
+        flags |= CPU::mask_from_flag(CPUFlag::Break);
+        flags |= CPU::mask_from_flag(CPUFlag::Break2);
+        self.stack_push_u8(flags);
     }
 
     // Pull Accumulator from stack
@@ -486,6 +499,8 @@ impl CPU {
     // Pull Processor status from stack
     pub(super) fn plp(&mut self, _addressmode: AddressingMode) {
         self.status = self.stack_pop_u8();
+        self.unset_flag(CPUFlag::Break);
+        self.set_flag(CPUFlag::Break2);
     }
 
     // Rotate left
@@ -551,6 +566,8 @@ impl CPU {
     // Return from interrupt
     pub(super) fn rti(&mut self, _addressmode: AddressingMode) {
         self.status = self.stack_pop_u8();
+        self.unset_flag(CPUFlag::Break);
+        self.set_flag(CPUFlag::Break2);
 
         // Substracts 1 to balance the +1 after the instruction
         self.reg_pc = self.stack_pop_u16().wrapping_sub(1);
@@ -558,9 +575,7 @@ impl CPU {
 
     // Return from subroutine
     pub(super) fn rts(&mut self, _addressmode: AddressingMode) {
-
-        // Substracts 1 to balance the +1 after the instruction
-        self.reg_pc = self.stack_pop_u16().wrapping_sub(1);
+        self.reg_pc = self.stack_pop_u16();
     }
 
     // Subtract with carry
@@ -611,6 +626,7 @@ impl CPU {
     // Store X register in memory
     pub(super) fn stx(&mut self, addressmode: AddressingMode) {
         let pos: u16 = self.get_address_from_mode(addressmode);
+        println!("Position : {:02x}", pos);
         self.mem_write_u8(pos, self.reg_x);
     }
 
@@ -670,23 +686,24 @@ impl CPU {
     // ===============================================================================
 
     // And with Accumulator and update carry flag
-    pub(super) fn aac(&mut self, _addressmode: AddressingMode) {
-        self.and(_addressmode);
+    pub(super) fn aac(&mut self, addressmode: AddressingMode) {
+        self.and(addressmode);
         self.put_flag(CPUFlag::Carry, self.get_flag(CPUFlag::Negative));
     }
 
     // And with Accumulator and transfer to X register
-    pub(super) fn aax(&mut self, _addressmode: AddressingMode) {
-        let pos: u16 = self.get_address_from_mode(_addressmode);
-        self.reg_x &= self.reg_a;
-        self.mem_write_u8(pos, self.reg_x);
-        self.update_n_flag(self.reg_a);
-        self.update_z_flag(self.reg_a)
+    pub(super) fn aax(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        let mut x: u8 = self.reg_x;
+        x &= self.reg_a;
+        self.mem_write_u8(pos, x);
+        // self.update_n_flag(x);
+        // self.update_z_flag(x)
     }
 
     // And with Accumulator, Rotate 1 bit right and set specific Carry/Overflow flags
-    pub(super) fn arr(&mut self, _addressmode: AddressingMode) {
-        let pos: u16 = self.get_address_from_mode(_addressmode);
+    pub(super) fn arr(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
         self.reg_a &= self.mem_read_u8(pos);
 
         //rotation
@@ -720,8 +737,8 @@ impl CPU {
     }
 
     // And with Accumulator, Rotate 1 bit right
-    pub(super) fn asr(&mut self, _addressmode: AddressingMode) {
-        let pos: u16 = self.get_address_from_mode(_addressmode);
+    pub(super) fn asr(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
         self.reg_a &= self.mem_read_u8(pos);
         let new_carry = self.reg_a & 0b0000_0001 == 0b0000_0001;
 
@@ -737,21 +754,21 @@ impl CPU {
     }
 
     // And with Accumulator, transfer Accumulator to X
-    pub(super) fn atx(&mut self, _addressmode: AddressingMode) {
-        self.and(_addressmode);
+    pub(super) fn atx(&mut self, addressmode: AddressingMode) {
+        self.and(addressmode);
         self.reg_x = self.reg_a;
     }
 
     // write (X and Accumulator and 7)  in memory 
-    pub(super) fn axa(&mut self, _addressmode: AddressingMode) {
-        let pos: u16 = self.get_address_from_mode(_addressmode);
+    pub(super) fn axa(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
         self.mem_write_u8(pos, (self.reg_a & self.reg_x) & 7 );
     }
 
     // write (X & A - addrValue) in X
     // PROBABLY WRONG
-    pub(super) fn axs(&mut self, _addressmode: AddressingMode) { 
-        let pos: u16 = self.get_address_from_mode(_addressmode);
+    pub(super) fn axs(&mut self, addressmode: AddressingMode) { 
+        let pos: u16 = self.get_address_from_mode(addressmode);
         self.reg_x = (self.reg_a & self.reg_x).wrapping_sub(self.mem_read_u8(pos));
 
         self.update_n_flag(self.reg_x);
@@ -760,13 +777,17 @@ impl CPU {
     }
 
     // Substract 1 from mem
-    pub(super) fn dcp(&mut self, _addressmode: AddressingMode) {
-        let pos: u16 = self.get_address_from_mode(_addressmode);
-        let to_write: u8 = self.mem_read_u8(pos).wrapping_sub(1);
+    pub(super) fn dcp(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        let value: u8 = self.mem_read_u8(pos);
+        let to_write: u8 = value.wrapping_sub(1);
         self.mem_write_u8(pos, to_write);
 
-        let value: bool = (self.mem_read_u8(pos) & 0b0000_0001) == 0;
-        self.put_flag(CPUFlag::Carry, value);
+        // let value: bool = (to_write & 0b0000_0001) == 0;
+        // self.put_flag(CPUFlag::Carry, value);
+        self.put_flag(CPUFlag::Carry, self.reg_a >= to_write);
+        self.put_flag(CPUFlag::Zero, self.reg_a == to_write);
+        self.put_flag(CPUFlag::Negative, ((self.reg_a.wrapping_sub(to_write)) as i8) < 0);
     }
 
     // Do nothing
@@ -774,18 +795,37 @@ impl CPU {
 
     // Increment mem then substract it from Accumulator
     // PROBABLY WRONG
-    pub(super) fn isc(&mut self, _addressmode: AddressingMode) {
-        let pos: u16 = self.get_address_from_mode(_addressmode);
+    pub(super) fn isc(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
         let to_write: u8 = self.mem_read_u8(pos).wrapping_add(1);
         self.mem_write_u8(pos, to_write);
 
-        let overflow:bool;
-        (self.reg_a , overflow) = self.reg_a.overflowing_sub(self.mem_read_u8(pos));
+        self.update_n_flag(to_write);
+        self.update_z_flag(to_write);
 
+
+
+
+        let carry: u8 = { if self.get_flag(CPUFlag::Carry) {0} else {1} };
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        let overflowed: bool;
+        let overflowed2: bool;
+
+        let base_a: u8 = self.reg_a;
+        let to_sub: u8 = self.mem_read_u8(pos);
+
+        (self.reg_a, overflowed) = self.reg_a.overflowing_sub(to_sub);
+        (self.reg_a, overflowed2) = self.reg_a.overflowing_sub(carry);
+        
+        self.put_flag(CPUFlag::Carry, !(overflowed | overflowed2));
         self.update_n_flag(self.reg_a);
         self.update_z_flag(self.reg_a);
-        self.put_flag(CPUFlag::Overflow, overflow);
-        self.put_flag(CPUFlag::Carry, !self.get_flag(CPUFlag::Negative));
+
+        // Set overflow if we add two positive (negative) integers which result to a negative (positive) integer
+        // First parenthesis has MSB set if base_a and to_add have the different MSB (+/- or -/+)
+        // Second parenthesis has MSB set if base_a and the result have different MSB (+/- or -/+)
+        // They are both set if we substract a negative to a positive and result is negative (or the contrary)
+        self.put_flag(CPUFlag::Overflow, ((base_a ^ to_sub) & (base_a ^ self.reg_a) & 0b1000_0000) != 0);
     }
 
     // Stop Program Counter (kill)
@@ -793,8 +833,8 @@ impl CPU {
     pub(super) fn kil(&mut self, _addressmode: AddressingMode) {self.set_flag(CPUFlag::Break);}
 
     // And with stack pointer, copy in sp, registers A and X
-    pub(super) fn lar(&mut self, _addressmode: AddressingMode) {
-        let pos: u16 = self.get_address_from_mode(_addressmode);
+    pub(super) fn lar(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
         self.reg_sp &= self.mem_read_u8(pos);
         self.reg_a = self.reg_sp;
         self.reg_x = self.reg_sp;
@@ -804,8 +844,8 @@ impl CPU {
     }
 
     // Load mem to Accumulator and X
-    pub(super) fn lax(&mut self, _addressmode: AddressingMode) {
-        let pos : u16 = self.get_address_from_mode(_addressmode);
+    pub(super) fn lax(&mut self, addressmode: AddressingMode) {
+        let pos : u16 = self.get_address_from_mode(addressmode);
         self.reg_a = self.mem_read_u8(pos);
         self.reg_x = self.mem_read_u8(pos);
 
@@ -813,11 +853,11 @@ impl CPU {
         self.update_z_flag(self.reg_a);
     }
 
-    // fn nop(&mut self, _addressmode: AddressingMode) {} // more opcodes match with it
+    // fn nop(&mut self, addressmode: AddressingMode) {} // more opcodes match with it
 
     // Rotate 1 bit let, And and store in accumulator 
-    pub(super) fn rla(&mut self, _addressmode: AddressingMode) {
-        let pos : u16 = self.get_address_from_mode(_addressmode);
+    pub(super) fn rla(&mut self, addressmode: AddressingMode) {
+        let pos : u16 = self.get_address_from_mode(addressmode);
         let new_carry = self.mem_read_u8(pos) & 0b1000_0000 == 0b1000_0000;
         
         let mut tmp_mem = self.mem_read_u8(pos) << 1;
@@ -832,32 +872,64 @@ impl CPU {
     }
 
     // Rotate 1 bit right in mem, then add to Accumulator
-    pub(super) fn rra(&mut self, _addressmode: AddressingMode) {
-        let pos: u16 = self.get_address_from_mode(_addressmode);
-        let new_carry = self.mem_read_u8(pos) & 0b0000_0001 == 0b0000_0001;
-        
-        //rotation
-        let mut tmp_mem = self.mem_read_u8(pos) >> 1;
-        if self.get_flag(CPUFlag::Carry) {
-            tmp_mem |= 0b1000_0000;
+    pub(super) fn rra(&mut self, addressmode: AddressingMode) {
+        let old_value: u8;
+        let mut res: u8;
+        match addressmode {
+            AddressingMode::Accumulator => {
+                old_value = self.reg_a;
+                res = old_value / 2;
+                if self.get_flag(CPUFlag::Carry) {
+                    res |= 0b1000_0000;
+                }
+                self.reg_a = res;
+                
+            }
+            _ => {
+                let pos: u16 = self.get_address_from_mode(addressmode);
+                old_value = self.mem_read_u8(pos);
+                res = old_value / 2;
+                if self.get_flag(CPUFlag::Carry) {
+                    res |= 0b1000_0000;
+                }
+                self.mem_write_u8(pos, res);
+            }
         }
-        self.mem_write_u8(pos, tmp_mem);
+        self.put_flag(CPUFlag::Carry, old_value & 0b0000_0001 != 0);
+        self.update_n_flag(res);
 
-        //add to accumulator
-        let overflow : bool;
-        (self.reg_a, overflow) = self.reg_a.overflowing_add(tmp_mem);
+        // On nesdev it says if A = 0 but on doc it says if res = 0 
+        self.update_z_flag(res);
 
-        self.put_flag(CPUFlag::Overflow, overflow);
-        self.put_flag(CPUFlag::Carry, new_carry); 
+        let carry: u8 = { if self.get_flag(CPUFlag::Carry) {1} else {0} };
+        let pos: u16 = self.get_address_from_mode(addressmode);
+        let overflowed: bool;
+        let overflowed2: bool;
+
+        let base_a: u8 = self.reg_a;
+        let to_add: u8 = self.mem_read_u8(pos);
+
+        (self.reg_a, overflowed) = self.reg_a.overflowing_add(to_add);
+        (self.reg_a, overflowed2) = self.reg_a.overflowing_add(carry);
+        
+        self.put_flag(CPUFlag::Carry, overflowed | overflowed2);
         self.update_n_flag(self.reg_a);
         self.update_z_flag(self.reg_a);
+
+        // Set overflow if we add two positive (negative) integers which result to a negative (positive) integer
+        // First parenthesis (with negation) has MSB set if base_a and to_add have the same MSB
+        // Second parenthesis has MSB set if base_a and the result have different MSB 
+        self.put_flag(CPUFlag::Overflow, (!(base_a ^ to_add) & (base_a ^ self.reg_a) & 0b1000_0000) != 0);
+
+
+
     }
     
-    // fn sbc(&mut self, _addressmode: AddressingMode) {} // more opcodes match with it
+    // fn sbc(&mut self, addressmode: AddressingMode) {} // more opcodes match with it
 
     // Shift 1 bit left in mem, then OR with Accumulator 
-    pub(super) fn slo(&mut self, _addressmode: AddressingMode) {
-        let pos: u16 = self.get_address_from_mode(_addressmode);
+    pub(super) fn slo(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
         let new_carry = self.mem_read_u8(pos) & 0b1000_0000 == 0b1000_0000;
 
         let value: u8 = self.mem_read_u8(pos) << 1;
@@ -871,8 +943,8 @@ impl CPU {
     }
 
     // Shift 1 bit right in mem, then XOR with Accumulator
-    pub(super) fn sre(&mut self, _addressmode: AddressingMode) {
-        let pos: u16 = self.get_address_from_mode(_addressmode);
+    pub(super) fn sre(&mut self, addressmode: AddressingMode) {
+        let pos: u16 = self.get_address_from_mode(addressmode);
         let new_carry = self.mem_read_u8(pos) & 0b0000_0001 == 0b0000_0001;
 
         let value: u8 = self.mem_read_u8(pos) >> 1;
@@ -886,14 +958,14 @@ impl CPU {
     }
 
     // And the high byte of addr with X, add 1 and store in mem
-    pub(super) fn sxa(&mut self, _addressmode: AddressingMode) {
-       let pos: u16 = self.get_address_from_mode(_addressmode);
+    pub(super) fn sxa(&mut self, addressmode: AddressingMode) {
+       let pos: u16 = self.get_address_from_mode(addressmode);
        self.mem_write_u8(pos, (self.reg_x & (pos >> 8) as u8) + 1 ); 
     }
 
     // And the high byte of addr with Y, add 1 and store in mem
-    pub(super) fn sya(&mut self, _addressmode: AddressingMode) {
-        let pos : u16 = self.get_address_from_mode(_addressmode);
+    pub(super) fn sya(&mut self, addressmode: AddressingMode) {
+        let pos : u16 = self.get_address_from_mode(addressmode);
         self.mem_write_u8(pos, (self.reg_y & (pos >> 8) as u8) + 1 );
     }
 
@@ -901,8 +973,8 @@ impl CPU {
     pub(super) fn top(&mut self, _addressmode: AddressingMode) {}
 
     // And mem And X And Accumulator, store in Accumulator
-    pub(super) fn xaa(&mut self, _addressmode: AddressingMode) {
-        let pos : u16 = self.get_address_from_mode(_addressmode);
+    pub(super) fn xaa(&mut self, addressmode: AddressingMode) {
+        let pos : u16 = self.get_address_from_mode(addressmode);
         self.reg_a &= self.reg_x & self.mem_read_u8(pos);
 
         self.update_n_flag(self.reg_a);
@@ -910,8 +982,8 @@ impl CPU {
     }
 
     // And X with Accumulator, store in Sp, And result with high byte of addr, store in mem
-    pub(super) fn xas(&mut self, _addressmode: AddressingMode) {
-        let pos : u16 = self.get_address_from_mode(_addressmode);
+    pub(super) fn xas(&mut self, addressmode: AddressingMode) {
+        let pos : u16 = self.get_address_from_mode(addressmode);
 
         self.reg_sp = self.reg_a & self.reg_x;
 

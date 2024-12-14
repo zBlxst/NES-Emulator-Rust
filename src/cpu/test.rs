@@ -83,7 +83,7 @@ mod test {
 
         let cpu = CPU::test_prog(vec![0xa2, 0xff, 0xe8, 0x00]);
         assert_eq!(cpu.reg_x, 0x00);
-        assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Overflow), 0);
+        assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Overflow), 0);
     }
 
     #[test]
@@ -94,7 +94,7 @@ mod test {
 
         let cpu = CPU::test_prog(vec![0xa0, 0xff, 0xc8, 0x00]);
         assert_eq!(cpu.reg_y, 0x00);
-        assert_ne!(cpu.status & CPU::mask_from_flag(CPUFlag::Overflow), 0);
+        assert_eq!(cpu.status & CPU::mask_from_flag(CPUFlag::Overflow), 0);
     }
 
     #[test]

@@ -87,6 +87,7 @@ fn main() -> Result<()> {
     // ================================== CPU initialization ========================================
 
     let game_path: String = String::from("rom_examples/snake.nes");
+    // let game_path: String = String::from("rom_examples/nestest.nes");
     let mut file: File = File::open(game_path.clone())?;
     let mut data: Vec<u8> = Vec::new();
     file.read_to_end(&mut data)?;
@@ -94,13 +95,15 @@ fn main() -> Result<()> {
     let mut cpu: CPU = CPU::new(Rom::new(&data)?);
     // cpu.load_program(&game_code)?;
     cpu.reset();
+
+    println!("Start at : {:04x}", cpu.reg_pc);
     
     let mut screen_state: [u8; 32 * 3 * 32] = [0 as u8; 32 * 3 * 32];
     let mut rng = rand::thread_rng();
 
 
     // =============================== Game Loop ======================================
-    //cpu.run_with_logs(game_path.as_str())?;
+    // cpu.run_with_logs(game_path.as_str())?;
 
 
     

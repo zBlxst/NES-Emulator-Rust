@@ -11,6 +11,7 @@ use crate::rom::Rom;
 
 use opcode::{AddressingMode, Opcode, OPCODES};
 
+const DEFAULT_STATUS: u8 = 0x24;
 
 macro_rules! instruct_name {
     ($func:ident) => {
@@ -30,12 +31,14 @@ pub struct CPU {
     pub stack_base      : u16, 
     pub program_base    : u16,
     pub bus             : Bus,
+    pub running         : bool,
 }
 
 #[derive(Debug)]
 pub enum CPUFlag {
     Negative,
     Overflow,
+    Break2,
     Break,
     Decimal,
     Interrupt,
@@ -66,10 +69,11 @@ impl CPU {
             reg_a  : 0,
             reg_x  : 0,
             reg_y  : 0,
-            status : 0,
+            status : DEFAULT_STATUS,
             stack_base : 0x0100,
             program_base : 0x8000,
             bus: Bus::new(rom),
+            running: false,
         }
     }
 
@@ -84,8 +88,9 @@ impl CPU {
         self.reg_a = 0;
         self.reg_x = 0;
         self.reg_y = 0;
-        self.reg_sp = 0xff;
-        self.status = 0;
+        self.reg_sp = 0xfd;
+        self.status = DEFAULT_STATUS;
+        self.running = true;
 
         self.reg_pc = self.mem_read_u16(PROGRAM_BASE_POINTER);
     }
@@ -119,11 +124,9 @@ impl CPU {
         loop {
             let opcode_num : u8 = self.mem_read_u8(self.reg_pc);
             let opcode : Opcode = OPCODES[opcode_num as usize];
-
-
             // ================ Creating logs ==================
             let mut cpu_state : String = format!("{:04X}  {:02X}", self.reg_pc, opcode_num);
-            let args: u16 = self.get_address_from_mode(opcode.address_mode);
+            let args: u16 = self.mem_read_u16(self.reg_pc.wrapping_add(1));
             match opcode.inst_size {
                 1 => cpu_state.push_str("      "),
                 2 => cpu_state.push_str(&format!(" {:02X}   ", (args & 0xff) as u8)),
@@ -133,13 +136,15 @@ impl CPU {
             //Instruction in ASM
             cpu_state.push_str("                                  ");   
             // Registers state
-            cpu_state.push_str(&format!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}\n", self.reg_a, self.reg_x, self.reg_y, self.status,self.reg_pc));
+            cpu_state.push_str(&format!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}\n", self.reg_a, self.reg_x, self.reg_y, self.status,self.reg_sp));
+            // cpu_state.push_str(&format!("*sp:{:02x} [{:02x} {:02x} {:02x} {:02x}]\n", self.reg_sp + 0, self.mem_read_u8(self.stack_base + self.reg_sp as u16), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 1), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 2), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 3)));
             logs.push_str(cpu_state.as_str());
+            // print!("{}", cpu_state);
 
             // =============== Execution ========================
             opcode.exec(self);
             self.bus.tick(opcode.cpu_cycles);
-            if self.status & CPU::mask_from_flag(CPUFlag::Break) != 0 {
+            if !(self.running) {
                 break;
             }
         }
@@ -168,7 +173,7 @@ impl CPU {
             }
             opcode.exec(self);
             self.bus.tick(opcode.cpu_cycles);
-            if self.status & CPU::mask_from_flag(CPUFlag::Break) != 0 {
+            if !(self.running) {
                 break;
             }
         }

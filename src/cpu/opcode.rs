@@ -184,7 +184,7 @@ pub static OPCODES: [Opcode; 256] = {
     // LDX
     instructions[0xa2] = Opcode{instruction : CPU::ldx, address_mode : AddressingMode::Immediate, inst_size : 2, cpu_cycles : 2};
     instructions[0xa6] = Opcode{instruction : CPU::ldx, address_mode : AddressingMode::ZeroPage, inst_size : 2, cpu_cycles : 3};
-    instructions[0xb2] = Opcode{instruction : CPU::ldx, address_mode : AddressingMode::ZeroPageY, inst_size : 2, cpu_cycles : 4};
+    instructions[0xb6] = Opcode{instruction : CPU::ldx, address_mode : AddressingMode::ZeroPageY, inst_size : 2, cpu_cycles : 4};
     instructions[0xae] = Opcode{instruction : CPU::ldx, address_mode : AddressingMode::Absolute, inst_size : 3, cpu_cycles : 4};
     instructions[0xbe] = Opcode{instruction : CPU::ldx, address_mode : AddressingMode::AbsoluteY, inst_size : 3, cpu_cycles : 4};
 
@@ -397,6 +397,7 @@ pub static OPCODES: [Opcode; 256] = {
     instructions[0x5a] = Opcode{instruction : CPU::nop, address_mode : AddressingMode::Implied, inst_size : 1, cpu_cycles : 2};
     instructions[0x7a] = Opcode{instruction : CPU::nop, address_mode : AddressingMode::Implied, inst_size : 1, cpu_cycles : 2};
     instructions[0xda] = Opcode{instruction : CPU::nop, address_mode : AddressingMode::Implied, inst_size : 1, cpu_cycles : 2};
+    instructions[0xfa] = Opcode{instruction : CPU::nop, address_mode : AddressingMode::Implied, inst_size : 1, cpu_cycles : 2};
 
     // RLA
     instructions[0x27] = Opcode{instruction : CPU::rla, address_mode : AddressingMode::ZeroPage, inst_size : 2, cpu_cycles : 5};
