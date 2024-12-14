@@ -22,7 +22,7 @@ pub enum AddressingMode {
 
 #[derive(Copy, Clone)]
 pub struct Opcode {
-    pub instruction : fn(&mut CPU, AddressingMode),
+    pub instruction : fn(&mut CPU, AddressingMode, u16) -> usize,
     pub address_mode : AddressingMode,
     pub inst_size : usize,
     pub cpu_cycles : usize,
@@ -31,9 +31,11 @@ pub struct Opcode {
 
 impl Opcode {
 
-    pub fn exec(self, cpu: &mut CPU) {
-        (self.instruction)(cpu, self.address_mode);
+    pub fn exec(self, cpu: &mut CPU) -> usize {
+        let new_pc: u16 = cpu.reg_pc.wrapping_add(self.inst_size as u16);
+        let additionnal_cycles: usize = (self.instruction)(cpu, self.address_mode, new_pc);
         cpu.reg_pc = cpu.reg_pc.wrapping_add(self.inst_size as u16);
+        self.cpu_cycles + additionnal_cycles
     }
 }
 

@@ -13,11 +13,11 @@ use opcode::{AddressingMode, Opcode, OPCODES};
 
 const DEFAULT_STATUS: u8 = 0x24;
 
-macro_rules! instruct_name {
-    ($func:ident) => {
-        stringify!($func).to_uppercase()
-    };
-}
+// macro_rules! instruct_name {
+//     ($func:ident) => {
+//         stringify!($func).to_uppercase()
+//     };
+// }
 
 
 #[derive(Debug)]
@@ -120,6 +120,7 @@ impl CPU {
         let folder = path.parent().map(|p| p.to_str()).unwrap().unwrap();
         let file_stem = path.file_stem().map(|s| s.to_str()).unwrap().unwrap();
         let log_path = String::from("./") + folder + "/" + file_stem + ".log";
+        let mut all_cycles: usize = 7;
 
         loop {
             let opcode_num : u8 = self.mem_read_u8(self.reg_pc);
@@ -136,14 +137,17 @@ impl CPU {
             //Instruction in ASM
             cpu_state.push_str("                                  ");   
             // Registers state
-            cpu_state.push_str(&format!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}\n", self.reg_a, self.reg_x, self.reg_y, self.status,self.reg_sp));
+            cpu_state.push_str(&format!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}", self.reg_a, self.reg_x, self.reg_y, self.status,self.reg_sp));
+            cpu_state.push_str("             ");
+            cpu_state.push_str(&format!("CYC:{}\n", all_cycles));
             // cpu_state.push_str(&format!("*sp:{:02x} [{:02x} {:02x} {:02x} {:02x}]\n", self.reg_sp + 0, self.mem_read_u8(self.stack_base + self.reg_sp as u16), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 1), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 2), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 3)));
             logs.push_str(cpu_state.as_str());
             // print!("{}", cpu_state);
 
             // =============== Execution ========================
-            opcode.exec(self);
-            self.bus.tick(opcode.cpu_cycles);
+            let cpu_cycles: usize = opcode.exec(self);
+            all_cycles += cpu_cycles;
+            self.bus.tick(cpu_cycles);
             if !(self.running) {
                 break;
             }
@@ -171,8 +175,8 @@ impl CPU {
             if debug {
                 println!("opcode {:02x} at {:04x}", self.mem_read_u8(self.reg_pc), self.reg_pc);
             }
-            opcode.exec(self);
-            self.bus.tick(opcode.cpu_cycles);
+            let cpu_cycles: usize = opcode.exec(self);
+            self.bus.tick(cpu_cycles);
             if !(self.running) {
                 break;
             }
