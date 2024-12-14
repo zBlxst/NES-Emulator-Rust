@@ -79,7 +79,7 @@ impl PPU {
             reg_w : false,
 
             internal_buffer: 0,
-            cycles: 0,
+            cycles: 21,
             scanline: 0,
         }
     }

@@ -138,7 +138,7 @@ impl CPU {
             cpu_state.push_str("                                  ");   
             // Registers state
             cpu_state.push_str(&format!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}", self.reg_a, self.reg_x, self.reg_y, self.status,self.reg_sp));
-            cpu_state.push_str("             ");
+            cpu_state.push_str(&format!(" PPU:{:3},{:3} ", self.bus.ppu.scanline, self.bus.ppu.cycles));
             cpu_state.push_str(&format!("CYC:{}\n", all_cycles));
             // cpu_state.push_str(&format!("*sp:{:02x} [{:02x} {:02x} {:02x} {:02x}]\n", self.reg_sp + 0, self.mem_read_u8(self.stack_base + self.reg_sp as u16), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 1), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 2), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 3)));
             logs.push_str(cpu_state.as_str());

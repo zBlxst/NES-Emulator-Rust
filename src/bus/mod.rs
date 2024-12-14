@@ -31,7 +31,7 @@ pub struct Bus {
     cpu_cycles: usize,
     cpu_vram: [u8; 0x800],
     program_rom: [u8; 0x8000],
-    ppu: PPU
+    pub ppu: PPU
 }
 
 impl Bus {
