@@ -24,7 +24,7 @@ impl AddressingRegister {
             self.value.0 = data;
         }
 
-        self.set(self.get() & 0x3fff); // to mirror down the address if above 0b0011_1111_1111_1111
+        self.set(self.get() & 0x3fff); // to mirror down the address if above 0x3fff
 
         self.high_ptr = !self.high_ptr; // So we don't update twice the same byte of the addr
     }
