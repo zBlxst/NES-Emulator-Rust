@@ -87,23 +87,27 @@ impl PPU {
         }
     }
 
-    pub fn tick(&mut self, ppu_cycles : usize) {
+    pub fn tick(&mut self, ppu_cycles : usize) -> bool {
         self.cycles += ppu_cycles;
         if self.cycles >= SCANLINE_DURATION_IN_PPU_CYCLES {
             self.cycles %= SCANLINE_DURATION_IN_PPU_CYCLES;
             self.scanline += 1;
-
-            if self.scanline == SCANLINE_NMI_TRIGGER && self.reg_control.generate_vblank_nmi() {
+            if self.scanline == SCANLINE_NMI_TRIGGER {
                 self.reg_status.set_vblank_status(true);
-                self.nmi_interrupt = Some(());
+                if self.reg_control.generate_vblank_nmi() {
+                    self.nmi_interrupt = Some(());
+                }
                 // todo!("trigger nmi intterupt")
             }
 
             if self.scanline >= SCANLINE_MAX{
                 self.scanline = 0;
                 self.reg_status.reset_vblank_status();
+                self.nmi_interrupt = None;
+                return true;
             }
         }
+        return false;
     }
 
     pub fn write_to_ppu_addr(&mut self, value: u8) {
@@ -123,21 +127,59 @@ impl PPU {
         }
     }
 
+    
     pub fn write_to_data(&mut self, value: u8) {
-        self.vram[self.reg_addr.get() as usize] = value;
+        let addr = self.reg_addr.get();
+        match addr {
+            0..=0x1fff => {
+                println!("attempt to write to chr rom space {}", addr);
+                // self.chr_rom[addr as usize] = value;
+            }, 
+            0x2000..=0x2fff => {
+                self.vram[self.mirror_vram_addr(addr) as usize] = value;
+            }
+            0x3000..=0x3eff => {
+                println!("addr {} shouldn't be used in reallity", addr);
+                self.vram[self.mirror_vram_addr(addr) as usize] = value;
+            }
+
+            // Addresses $3F10/$3F14/$3F18/$3F1C are mirrors of $3F00/$3F04/$3F08/$3F0C
+            0x3f10 | 0x3f14 | 0x3f18 | 0x3f1c => {
+                let add_mirror = addr - 0x10;
+                self.palette_table[(add_mirror - 0x3f00) as usize] = value;
+            }
+            0x3f00..=0x3fff =>
+            {
+                self.palette_table[(addr - 0x3f00) as usize] = value;
+            }
+            _ => println!("unexpected access to mirrored space {}", addr),
+        }
+        self.increment_vram_addr();
+    }
+    
+    
+    fn increment_vram_addr(&mut self) {
+        self.reg_addr.increment(self.reg_control.vram_addr_increment());
     }
 
+    pub fn write_to_oam_addr(&mut self, value: u8) {
+        self.reg_oam_addr = value;
+    }
+    
     pub fn write_to_oam_data(&mut self, value: u8) {
         self.oam_data[self.reg_oam_addr as usize] = value;
         self.reg_oam_addr = self.reg_oam_addr.wrapping_add(1);
     }
 
-    fn increment_vram_addr(&mut self) {
-        self.reg_addr.increment(self.reg_control.vram_addr_increment());
-    }
-
     pub fn read_oam_data(&self) -> u8 {
         self.oam_data[self.reg_oam_addr as usize]
+    }
+
+    pub fn write_oam_dma(&mut self, data: &[u8; 256]) {
+        for x in data.iter() {
+            self.oam_data[self.reg_oam_addr as usize] = *x;
+            self.reg_oam_addr = self.reg_oam_addr.wrapping_add(1);
+        }
     }
 
     pub fn read_data(&mut self) -> u8 {
@@ -162,16 +204,22 @@ impl PPU {
     }
 
     pub fn read_status(&mut self) -> u8 {
-        self.reg_status.bits()
+        let res: u8 = self.reg_status.snapshot();
+        self.reg_status.reset_vblank_status();
+        self.reg_addr.reset_latch();
+        res
     }
 
     fn mirror_vram_addr(&self, addr: u16) -> u16 {
         let mirrored_addr: u16 = addr & 0x2fff; // From 0x3000-0x3eff to 0x2000-0x2eff
         let vram_index: u16 = mirrored_addr - VRAM_START;
-        match self.mirroring {
-            Mirroring::HORIZONTAL => vram_index & 0x0bff,
-            Mirroring::VERTICAL => vram_index & 0x07ff,
-            Mirroring::FOURSCREEN => vram_index
+        let name_table = vram_index / 0x400;
+        match (&self.mirroring, name_table) {
+            (Mirroring::VERTICAL, 2) | (Mirroring::VERTICAL, 3) => vram_index - 0x800,
+            (Mirroring::HORIZONTAL, 2) => vram_index - 0x400,
+            (Mirroring::HORIZONTAL, 1) => vram_index - 0x400,
+            (Mirroring::HORIZONTAL, 3) => vram_index - 0x800,
+            _ => vram_index,
         }
     }
 

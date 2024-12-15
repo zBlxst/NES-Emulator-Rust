@@ -19,9 +19,9 @@ impl AddressingRegister {
 
     pub fn update(&mut self, data: u8) {
         if self.high_ptr {
-            self.value.1 = data;
-        } else {
             self.value.0 = data;
+        } else {
+            self.value.1 = data;
         }
 
         self.set(self.get() & 0x3fff); // to mirror down the address if above 0x3fff

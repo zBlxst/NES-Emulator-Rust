@@ -59,7 +59,7 @@ impl ControlRegister {
     }
 
     pub fn sprite_size(&self) -> u8 {
-        if !self.contains(ControlRegister::HEIGHT_SPRITE) { 8 } else { 11 }
+        if !self.contains(ControlRegister::HEIGHT_SPRITE) { 8 } else { 16 }
     }
 
     pub fn master_slave_select(&self) -> u8 {

@@ -13,7 +13,9 @@ mod test {
 
     impl CPU {
         pub fn test_prog(program: Vec<u8>) -> Self {
-            let mut cpu = CPU::new(Rom::new_from_program_rom(program).unwrap());
+            let rom: Rom = Rom::new_from_program_rom(program).unwrap();
+            let bus: Bus = Bus::new(rom, |_, _| {});
+            let mut cpu = CPU::new(bus);
             cpu.set_program_base(0x8000).unwrap();
             cpu.reset();
             cpu.run();

@@ -1,10 +1,12 @@
 use anyhow::{Error, Result};
+use nes_emul::bus::Bus;
 use nes_emul::cpu::CPU;
 use nes_emul::mem::Mem;
+use nes_emul::ppu::PPU;
 use nes_emul::rom::Rom;
+use nes_emul::screen::{render, Screen};
 
 use nes_emul::screen::frame::Frame;
-use nes_emul::screen::render::{show_tile, show_tiles};
 use sdl2::{Sdl, VideoSubsystem, EventPump};
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::render::{Canvas, Texture, TextureCreator};
@@ -16,8 +18,6 @@ use std::io::Read;
 use std::fs::File;
 
 use rand::Rng;
-
-const SCALE_FACTOR: u16 = 3;
 
 fn handle_user_input(cpu: &mut CPU, event_pump: &mut EventPump) {
     for event in event_pump.poll_iter() {
@@ -64,27 +64,8 @@ fn read_screen_state(cpu: &mut CPU, frame: &mut [u8; 32 * 3 * 32]) -> bool {
 }   
 
 
-fn main() -> Result<()> {
+fn main() -> Result<()>{
     println!("Hello, world!");
-
-    // ================================ Graphics Initialization ==================================
-    let sdl_context: Sdl = sdl2::init().map_err(Error::msg)?;
-    let video_subsystem: VideoSubsystem = sdl_context.video().map_err(Error::msg)?;
-    let window: Window = video_subsystem
-        .window("NES Emulator", (256*SCALE_FACTOR) as u32, (256*SCALE_FACTOR) as u32)
-        .position_centered()
-        .build()?;
-
-    let mut canvas: Canvas<Window> = window.into_canvas().present_vsync().build()?;
-    let mut event_pump: EventPump = sdl_context.event_pump().map_err(Error::msg)?;
-
-    canvas.set_scale(SCALE_FACTOR as f32, SCALE_FACTOR as f32).map_err(Error::msg)?;
-
-    let creator: TextureCreator<WindowContext> = canvas.texture_creator();
-    let mut texture: Texture<'_> = creator.create_texture_target(PixelFormatEnum::RGB24, 256, 240)?;
-
-
-
 
     // ================================== CPU initialization ========================================
 
@@ -95,18 +76,40 @@ fn main() -> Result<()> {
     file.read_to_end(&mut data)?;
 
     let rom: Rom = Rom::new(&data)?; 
-    // let mut cpu: CPU = CPU::new(rom);
-    // cpu.load_program(&game_code)?;
-    // cpu.reset();
+    let bus = Bus::new(rom, |ppu: &PPU, screen: &mut Screen| {
+        render::render(ppu, &mut screen.frame);
+        let mut texture: Texture<'_> = screen.creator.create_texture_target(PixelFormatEnum::RGB24, 256, 240).expect("Cannot create texture !");
+        texture.update(None, &screen.frame.data, 256 * 3).unwrap();
+ 
+        screen.canvas.copy(&texture, None, None).unwrap();
+ 
+        screen.canvas.present();
 
-    // println!("Start at : {:04x}", cpu.reg_pc);
+        for event in screen.event_pump.poll_iter() {
+            match event {
+              Event::Quit { .. }
+              | Event::KeyDown {
+                  keycode: Some(Keycode::Escape),
+                  ..
+              } => std::process::exit(0),
+              _ => { /* do nothing */ }
+            }
+         }
+        
+    });
+    let mut cpu: CPU = CPU::new(bus);
+    // cpu.load_program(&game_code)?;
+    cpu.reset();
+
+    println!("Start at : {:04x}", cpu.reg_pc);
     
     // let mut screen_state: [u8; 32 * 3 * 32] = [0 as u8; 32 * 3 * 32];
     // let mut rng = rand::thread_rng();
 
-
+    
     // =============================== Game Loop ======================================
     // cpu.run_with_logs(game_path.as_str())?;
+    cpu.run();
 
 
     
@@ -123,26 +126,6 @@ fn main() -> Result<()> {
     
     // =============================== Frame Rendering ======================================
     
-    let tile_frame: Frame = show_tiles(&rom.chr_rom, 0);
-    texture.update(None, &tile_frame.data, 256*3).unwrap();
-    canvas.copy(&texture, None, None).unwrap();
-    canvas.present();
-
-    loop {
-        for event in event_pump.poll_iter() {
-           match event {
-             Event::Quit { .. }
-             | Event::KeyDown {
-                keycode: Some(Keycode::Escape),
-                ..
-             } => std::process::exit(0),
-             _ => { /* do nothing */ }
-           }
-        }
-     }
-
-
-
 
 
 

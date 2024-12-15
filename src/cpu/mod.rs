@@ -14,7 +14,6 @@ use opcode::{AddressingMode, Opcode, OPCODES};
 
 const DEFAULT_STATUS: u8 = 0x24;
 
-#[derive(Debug)]
 pub struct CPU {
     pub reg_pc          : u16,
     pub reg_sp          : u8,
@@ -56,7 +55,7 @@ impl CPU {
     // ============================= API =================================
     // ===================================================================
 
-    pub fn new(rom: Rom) -> Self {
+    pub fn new(bus: Bus) -> Self {
         CPU {
             reg_pc : 0,
             reg_sp : 0,
@@ -66,7 +65,7 @@ impl CPU {
             status : DEFAULT_STATUS,
             stack_base : 0x0100,
             program_base : 0x8000,
-            bus: Bus::new(rom),
+            bus: bus,
             running: false,
         }
     }
@@ -90,6 +89,9 @@ impl CPU {
     }
 
     pub fn interrupt_nmi(&mut self) {
+        // if self.get_flag(CPUFlag::InterruptDisabled) {
+        //     return;
+        // }
         self.stack_push_u16(self.reg_pc);
         let mut status: u8 = self.status;
         status |= CPU::mask_from_flag(CPUFlag::Break);
@@ -167,6 +169,50 @@ impl CPU {
         }
     }
 
+    pub fn log_args_str_without_addr_resolution(cpu: &mut CPU, _opcode: &Opcode, args: u16, addressing_mode: AddressingMode) -> String {
+        match addressing_mode {
+            AddressingMode::Immediate => format!("#${:02X}", args & 0xff),
+            AddressingMode::Absolute => format!("${:04X}", args),
+            AddressingMode::ZeroPage => format!("${:02X}", args & 0xff),
+            AddressingMode::ZeroPageX => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                format!("${:02X},X @ {:02X}", args & 0xff, addr)
+            }
+            AddressingMode::ZeroPageY => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                format!("${:02X},Y @ {:02X}", args & 0xff, addr)
+            }
+            AddressingMode::AbsoluteX => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                format!("${:04X},X @ {:04X}", args, addr)
+            } 
+            AddressingMode::AbsoluteY => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                format!("${:04X},Y @ {:04X}", args, addr)
+            }
+            AddressingMode::Indirect => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                format!("(${:04X}) = {:04X}", args, addr)
+            }
+            AddressingMode::IndirectX => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                format!("(${:02X},X) @ {:02X} = {:04X}", args & 0xff, args.wrapping_add(cpu.reg_x as u16) & 0xff, addr)
+            }
+            AddressingMode::IndirectY => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                format!("(${:02X}),Y = {:04X} @ {:04X}", args & 0xff, addr.wrapping_sub(cpu.reg_y as u16), addr)
+            }
+            AddressingMode::Relative => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                let offset: u8 = cpu.mem_read_u8_no_fail(addr, true);
+                let value: u16 = if offset < 127 { cpu.reg_pc.wrapping_add(2).wrapping_add(offset as u16) } else { cpu.reg_pc.wrapping_add(2).wrapping_sub(256 - offset as u16) };
+                format!("${:04X}", value)
+            }
+            AddressingMode::Accumulator => format!("A"),
+            _ => String::from("")
+        }
+    }
+
 
     pub fn run_with_logs(&mut self, game_path : &str) -> Result<(), Error>{
         let mut logs : String = String::from("");
@@ -177,6 +223,9 @@ impl CPU {
         let mut all_cycles: usize = 7;
 
         loop {
+            if let Some(()) = self.bus.poll_interrupt_nmi() {
+                self.interrupt_nmi();
+            }
             let opcode_num : u8 = self.mem_read_u8(self.reg_pc);
             let opcode : Opcode = OPCODES[opcode_num as usize];
             // ================ Creating logs ==================
@@ -189,7 +238,7 @@ impl CPU {
                 _ => println!("Should not happen")
             }
             //Instruction in ASM
-            cpu_state.push_str(&format!(" {}{} {:27} ", if opcode.official { " " } else { "*" }, opcode.name, CPU::log_args_str(self, &opcode, args, opcode.address_mode)));   
+            cpu_state.push_str(&format!(" {}{} {:27} ", if opcode.official { " " } else { "*" }, opcode.name, CPU::log_args_str_without_addr_resolution(self, &opcode, args, opcode.address_mode)));   
             // Registers state
             cpu_state.push_str(&format!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}", self.reg_a, self.reg_x, self.reg_y, self.status,self.reg_sp));
             cpu_state.push_str(&format!(" PPU:{:3},{:3} ", self.bus.ppu.scanline, self.bus.ppu.cycles));

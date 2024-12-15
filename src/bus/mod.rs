@@ -3,6 +3,7 @@ use sdl2::libc::MOD_FREQUENCY;
 use crate::mem::Mem;
 use crate::ppu::PPU;
 use crate::rom::Rom;
+use crate::screen::Screen;
 
 pub const CPU_RAM_START: u16 = 0x0000;
 pub const CPU_RAM_END: u16 = 0x1fff;
@@ -14,7 +15,7 @@ const PPU_CONTROLER_REGISTER: u16 = 0x2000;
 const PPU_MASK_REGISTER: u16 = 0x2001;
 const PPU_STATUS_REGISTER: u16 = 0x2002;
 const PPU_OAM_ADDRESS_REGISTER: u16 = 0x2003;
-const _PPU_OAM_DATA_REGISTER: u16 = 0x2004;
+const PPU_OAM_DATA_REGISTER: u16 = 0x2004;
 const PPU_SCROLL_REGISTER: u16 = 0x2005;
 const PPU_ADDRESS_REGISTER: u16 = 0x2006;
 const PPU_DATA_REGISTER: u16 = 0x2007;
@@ -30,21 +31,24 @@ pub const NMI_ADDRESS_POINTER: u16 = 0xfffa;
 
 // Is it possible to replace some constant 0x by const values?
 
-#[derive(Debug)]
 pub struct Bus {
     cpu_cycles: usize,
     cpu_vram: [u8; 0x800],
     program_rom: [u8; 0x8000],
     pub ppu: PPU,
+    screen: Screen, 
+    gameloop_callback: fn(&PPU, &mut Screen)
 }
 
 impl Bus {
-    pub fn new(rom: Rom) -> Self {
+    pub fn new(rom: Rom, gameloop_callback: fn(&PPU, &mut Screen)) -> Self {
         Bus {
             cpu_cycles: 0,
             cpu_vram: [0; 0x800],
             program_rom: rom.program_rom,
             ppu: PPU::new(rom.chr_rom, rom.screen_mirroring),
+            screen: Screen::new(),
+            gameloop_callback: gameloop_callback
         }
     }
 
@@ -65,7 +69,11 @@ impl Bus {
 
     pub fn tick(&mut self, op_cycles : usize){
         self.cpu_cycles += op_cycles;
-        self.ppu.tick(op_cycles * 3); // PPU runs 3 times faster than CPU
+        let new_frame: bool = self.ppu.tick(op_cycles * 3); // PPU runs 3 times faster than CPU
+        // println!("Before : {} / After : {}", nmi_before, nmi_after);
+        if new_frame {
+            (self.gameloop_callback)(&self.ppu, &mut self.screen);
+        } 
     }
 
     pub fn poll_interrupt_nmi(&mut self) -> Option<()> {
@@ -78,7 +86,7 @@ impl Mem for Bus {
     fn mem_read_u8_no_fail(&mut self, addr: u16, no_fail: bool) -> u8 {
         match addr {
             CPU_RAM_START..=CPU_RAM_END => {// from 0x0000 to 0x1fff
-                let real_addr: u16 = addr & 0x1fff;
+                let real_addr: u16 = addr & 0x7ff;
                 self.cpu_vram[real_addr as usize]
             }
 
@@ -106,7 +114,7 @@ impl Mem for Bus {
             }
 
             _ => {
-                println!("Ignoring access to address {:x}", addr);
+                // println!("Ignoring access to address {:x}", addr);
                 0
             }
         }
@@ -116,7 +124,7 @@ impl Mem for Bus {
     fn mem_write_u8(&mut self, addr: u16, value: u8) {
         match addr {
             CPU_RAM_START..=CPU_RAM_END => {// from 0x0000 to 0x1fff
-                let real_addr: u16 = addr & 0x1fff;
+                let real_addr: u16 = addr & 0x7ff;
                 self.cpu_vram[real_addr as usize] = value;
             }
 
@@ -125,9 +133,21 @@ impl Mem for Bus {
             PPU_ADDRESS_REGISTER => self.ppu.write_to_ppu_addr(value),// 0x2006
             PPU_DATA_REGISTER => self.ppu.write_to_data(value),// 0x2007
 
-            PPU_OAM_ADDRESS_REGISTER | PPU_SCROLL_REGISTER | PPU_OAM_DMA_REGISTER => panic!("Not implemented yet !"),
+            PPU_OAM_ADDRESS_REGISTER => self.ppu.write_to_oam_addr(value), // 0x2003
+            PPU_OAM_DATA_REGISTER => self.ppu.write_to_oam_data(value), // 0x2004
 
-            PPU_STATUS_REGISTER => panic!("Trying to write to PPU Status !"),
+            PPU_SCROLL_REGISTER => println!("PPU Scroll register not implemented !"), // 0x2002
+            
+            PPU_STATUS_REGISTER => panic!("Trying to write to PPU Status !"), // 0x2005
+
+            PPU_OAM_DMA_REGISTER => {
+                let mut buffer: [u8; 256] = [0; 256];
+                let hi: u16 = (value as u16) << 8;
+                for i in 0..256 {
+                    buffer[i as usize] = self.mem_read_u8(hi+i);
+                }
+                self.ppu.write_oam_dma(&buffer);
+            }
 
             PPU_REGISTERS_MIRRORING_START..=PPU_REGISTERS_MIRRORING_END => {// from 0x2000 to 0x3fff
                 let mirrored_addr: u16 = addr & 0x2007;
@@ -138,7 +158,7 @@ impl Mem for Bus {
             }
 
             _ => {
-                println!("Ignoring write-access to address {:x}", addr);
+                // println!("Ignoring write-access to address {:x}", addr);
             }
         }
     }
