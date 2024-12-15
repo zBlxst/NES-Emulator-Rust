@@ -7,7 +7,7 @@ use std::path::Path;
 
 use crate::error::Error;
 use crate::mem::Mem;
-use crate::bus::{Bus, PROGRAM_BASE_POINTER};
+use crate::bus::{Bus, PROGRAM_BASE_POINTER, NMI_ADDRESS_POINTER};
 use crate::rom::Rom;
 
 use opcode::{AddressingMode, Opcode, OPCODES};
@@ -35,14 +35,14 @@ pub enum CPUFlag {
     Break2,
     Break,
     Decimal,
-    Interrupt,
+    InterruptDisabled,
     Zero,
     Carry,
 }
 
 impl Mem for CPU {
-    fn mem_read_u8(&mut self, addr: u16) -> u8 {
-        self.bus.mem_read_u8(addr)
+    fn mem_read_u8_no_fail(&mut self, addr: u16, no_fail: bool) -> u8 {
+        self.bus.mem_read_u8_no_fail(addr, no_fail)
     }
 
     fn mem_write_u8(&mut self, addr: u16, value: u8) {
@@ -89,6 +89,18 @@ impl CPU {
         self.reg_pc = self.mem_read_u16(PROGRAM_BASE_POINTER);
     }
 
+    pub fn interrupt_nmi(&mut self) {
+        self.stack_push_u16(self.reg_pc);
+        let mut status: u8 = self.status;
+        status |= CPU::mask_from_flag(CPUFlag::Break);
+        status |= CPU::mask_from_flag(CPUFlag::Break2);
+        self.stack_push_u8(status);
+        self.set_flag(CPUFlag::InterruptDisabled);
+
+        self.bus.tick(2);
+        self.reg_pc = self.mem_read_u16(NMI_ADDRESS_POINTER);
+    }
+
     // We should check the size of the program
     // pub fn load_program(&mut self, program: &Vec<u8>) -> Result<(), Error>{
     //     // if self.program_base as usize + program.len() > 0x2000 {
@@ -110,43 +122,43 @@ impl CPU {
     pub fn log_args_str(cpu: &mut CPU, opcode: &Opcode, args: u16, addressing_mode: AddressingMode) -> String {
         match addressing_mode {
             AddressingMode::Immediate => format!("#${:02X}", args & 0xff),
-            AddressingMode::Absolute => if opcode.name == "JMP" || opcode.name == "JSR" { format!("${:04X}", args) } else { format!("${:04X} = {:02X}", args, cpu.mem_read_u8(args)) },
-            AddressingMode::ZeroPage => format!("${:02X} = {:02X}", args & 0xff, cpu.mem_read_u8(args & 0xff)),
+            AddressingMode::Absolute => if opcode.name == "JMP" || opcode.name == "JSR" { format!("${:04X}", args) } else { format!("${:04X} = {:02X}", args, cpu.mem_read_u8_no_fail(args, true)) },
+            AddressingMode::ZeroPage => format!("${:02X} = {:02X}", args & 0xff, cpu.mem_read_u8_no_fail(args & 0xff, true)),
             AddressingMode::ZeroPageX => {
                 let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
-                format!("${:02X},X @ {:02X} = {:02X}", args & 0xff, addr, cpu.mem_read_u8(addr))
+                format!("${:02X},X @ {:02X} = {:02X}", args & 0xff, addr, cpu.mem_read_u8_no_fail(addr, true))
             }
             AddressingMode::ZeroPageY => {
                 let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
-                format!("${:02X},Y @ {:02X} = {:02X}", args & 0xff, addr, cpu.mem_read_u8(addr))
+                format!("${:02X},Y @ {:02X} = {:02X}", args & 0xff, addr, cpu.mem_read_u8_no_fail(addr, true))
             }
             AddressingMode::AbsoluteX => {
                 let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
-                format!("${:04X},X @ {:04X} = {:02X}", args, addr, cpu.mem_read_u8(addr))
+                format!("${:04X},X @ {:04X} = {:02X}", args, addr, cpu.mem_read_u8_no_fail(addr, true))
             } 
             AddressingMode::AbsoluteY => {
                 let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
-                format!("${:04X},Y @ {:04X} = {:02X}", args, addr, cpu.mem_read_u8(addr))
+                format!("${:04X},Y @ {:04X} = {:02X}", args, addr, cpu.mem_read_u8_no_fail(addr, true))
             }
             AddressingMode::Indirect => {
                 let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
                 if opcode.name == "JMP" || opcode.name == "JSR" {
                     format!("(${:04X}) = {:04X}", args, addr)
                 } else {
-                    format!("(${:04X}) @ {:04X} = {:02X}", args, addr, cpu.mem_read_u8(addr))
+                    format!("(${:04X}) @ {:04X} = {:02X}", args, addr, cpu.mem_read_u8_no_fail(addr, true))
                 }
             }
             AddressingMode::IndirectX => {
                 let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
-                format!("(${:02X},X) @ {:02X} = {:04X} = {:02X}", args & 0xff, args.wrapping_add(cpu.reg_x as u16) & 0xff, addr, cpu.mem_read_u8(addr))
+                format!("(${:02X},X) @ {:02X} = {:04X} = {:02X}", args & 0xff, args.wrapping_add(cpu.reg_x as u16) & 0xff, addr, cpu.mem_read_u8_no_fail(addr, true))
             }
             AddressingMode::IndirectY => {
                 let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
-                format!("(${:02X}),Y = {:04X} @ {:04X} = {:02X}", args & 0xff, addr.wrapping_sub(cpu.reg_y as u16), addr, cpu.mem_read_u8(addr))
+                format!("(${:02X}),Y = {:04X} @ {:04X} = {:02X}", args & 0xff, addr.wrapping_sub(cpu.reg_y as u16), addr, cpu.mem_read_u8_no_fail(addr, true))
             }
             AddressingMode::Relative => {
                 let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
-                let offset: u8 = cpu.mem_read_u8(addr);
+                let offset: u8 = cpu.mem_read_u8_no_fail(addr, true);
                 let value: u16 = if offset < 127 { cpu.reg_pc.wrapping_add(2).wrapping_add(offset as u16) } else { cpu.reg_pc.wrapping_add(2).wrapping_sub(256 - offset as u16) };
                 format!("${:04X}", value)
             }
@@ -184,7 +196,7 @@ impl CPU {
             cpu_state.push_str(&format!("CYC:{}\n", all_cycles));
             // cpu_state.push_str(&format!("*sp:{:02x} [{:02x} {:02x} {:02x} {:02x}]\n", self.reg_sp + 0, self.mem_read_u8(self.stack_base + self.reg_sp as u16), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 1), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 2), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 3)));
             logs.push_str(cpu_state.as_str());
-            // print!("{}", cpu_state);
+            print!("{}", cpu_state);
 
             // =============== Execution ========================
             let cpu_cycles: usize = opcode.exec(self);
@@ -211,6 +223,9 @@ impl CPU {
     pub fn run_with_callback<F>(&mut self, mut callback: F, debug : bool)
     where F: FnMut(&mut CPU) {
         loop {
+            if let Some(()) = self.bus.poll_interrupt_nmi() {
+                self.interrupt_nmi();
+            }
             callback(self);
 
             let opcode: Opcode = OPCODES[self.mem_read_u8(self.reg_pc) as usize];

@@ -45,6 +45,7 @@ pub struct PPU {
     pub reg_oam_addr: u8,
     pub reg_oam_data: u8,
     pub reg_status: StatusRegister,
+    pub nmi_interrupt: Option<()>,
 
     //internal registers
     pub reg_v : u16, // 15 bits
@@ -72,6 +73,8 @@ impl PPU {
             reg_oam_addr: 0,
             reg_oam_data: 0,
             reg_status: StatusRegister::new(),
+            nmi_interrupt: None,
+
 
             reg_v : 0,
             reg_t : 0,
@@ -92,7 +95,8 @@ impl PPU {
 
             if self.scanline == SCANLINE_NMI_TRIGGER && self.reg_control.generate_vblank_nmi() {
                 self.reg_status.set_vblank_status(true);
-                todo!("trigger nmi intterupt")
+                self.nmi_interrupt = Some(());
+                // todo!("trigger nmi intterupt")
             }
 
             if self.scanline >= SCANLINE_MAX{
@@ -106,8 +110,17 @@ impl PPU {
         self.reg_addr.update(value);
     }
 
+    pub fn write_to_mask(&mut self, value: u8) {
+        self.reg_mask.update(value);
+    }
+
     pub fn write_to_control(&mut self, value: u8) {
+        let before_nmi_status: bool = self.reg_control.generate_vblank_nmi(); 
         self.reg_control.update(value);
+        let after_nmi_status: bool = self.reg_control.generate_vblank_nmi(); 
+        if !before_nmi_status && after_nmi_status && self.reg_status.is_in_vblank() {
+            self.nmi_interrupt = Some(());
+        }
     }
 
     pub fn write_to_data(&mut self, value: u8) {
@@ -148,6 +161,10 @@ impl PPU {
         }
     }
 
+    pub fn read_status(&mut self) -> u8 {
+        self.reg_status.bits()
+    }
+
     fn mirror_vram_addr(&self, addr: u16) -> u16 {
         let mirrored_addr: u16 = addr & 0x2fff; // From 0x3000-0x3eff to 0x2000-0x2eff
         let vram_index: u16 = mirrored_addr - VRAM_START;
@@ -156,5 +173,9 @@ impl PPU {
             Mirroring::VERTICAL => vram_index & 0x07ff,
             Mirroring::FOURSCREEN => vram_index
         }
+    }
+
+    pub fn poll_nmi_interrupt(&mut self) -> Option<()> {
+        self.nmi_interrupt.take()
     }
 }

@@ -4,3 +4,4 @@ pub mod mem;
 pub mod bus;
 pub mod rom;
 pub mod ppu;
+pub mod screen;

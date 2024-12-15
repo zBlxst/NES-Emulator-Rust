@@ -3,6 +3,8 @@ use nes_emul::cpu::CPU;
 use nes_emul::mem::Mem;
 use nes_emul::rom::Rom;
 
+use nes_emul::screen::frame::Frame;
+use nes_emul::screen::render::{show_tile, show_tiles};
 use sdl2::{Sdl, VideoSubsystem, EventPump};
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::render::{Canvas, Texture, TextureCreator};
@@ -15,7 +17,7 @@ use std::fs::File;
 
 use rand::Rng;
 
-const SCALE_FACTOR: u16 = 30;
+const SCALE_FACTOR: u16 = 3;
 
 fn handle_user_input(cpu: &mut CPU, event_pump: &mut EventPump) {
     for event in event_pump.poll_iter() {
@@ -69,7 +71,7 @@ fn main() -> Result<()> {
     let sdl_context: Sdl = sdl2::init().map_err(Error::msg)?;
     let video_subsystem: VideoSubsystem = sdl_context.video().map_err(Error::msg)?;
     let window: Window = video_subsystem
-        .window("NES Emulator", (32*SCALE_FACTOR) as u32, (32*SCALE_FACTOR) as u32)
+        .window("NES Emulator", (256*SCALE_FACTOR) as u32, (256*SCALE_FACTOR) as u32)
         .position_centered()
         .build()?;
 
@@ -79,31 +81,32 @@ fn main() -> Result<()> {
     canvas.set_scale(SCALE_FACTOR as f32, SCALE_FACTOR as f32).map_err(Error::msg)?;
 
     let creator: TextureCreator<WindowContext> = canvas.texture_creator();
-    let mut texture: Texture<'_> = creator.create_texture_target(PixelFormatEnum::RGB24, 32, 32)?;
+    let mut texture: Texture<'_> = creator.create_texture_target(PixelFormatEnum::RGB24, 256, 240)?;
 
 
 
 
     // ================================== CPU initialization ========================================
 
-    // let game_path: String = String::from("rom_examples/snake.nes");
-    let game_path: String = String::from("rom_examples/nestest.nes");
+    let game_path: String = String::from("rom_examples/Pac-Man.nes");
+    // let game_path: String = String::from("rom_examples/nestest.nes");
     let mut file: File = File::open(game_path.clone())?;
     let mut data: Vec<u8> = Vec::new();
     file.read_to_end(&mut data)?;
-    
-    let mut cpu: CPU = CPU::new(Rom::new(&data)?);
-    // cpu.load_program(&game_code)?;
-    cpu.reset();
 
-    println!("Start at : {:04x}", cpu.reg_pc);
+    let rom: Rom = Rom::new(&data)?; 
+    // let mut cpu: CPU = CPU::new(rom);
+    // cpu.load_program(&game_code)?;
+    // cpu.reset();
+
+    // println!("Start at : {:04x}", cpu.reg_pc);
     
-    let mut screen_state: [u8; 32 * 3 * 32] = [0 as u8; 32 * 3 * 32];
-    let mut rng = rand::thread_rng();
+    // let mut screen_state: [u8; 32 * 3 * 32] = [0 as u8; 32 * 3 * 32];
+    // let mut rng = rand::thread_rng();
 
 
     // =============================== Game Loop ======================================
-    cpu.run_with_logs(game_path.as_str())?;
+    // cpu.run_with_logs(game_path.as_str())?;
 
 
     
@@ -116,12 +119,33 @@ fn main() -> Result<()> {
     //         canvas.present();
     //     }
     //     ::std::thread::sleep(std::time::Duration::new(0, 10_000));
-    // }, false);
+    // }, true);
     
+    // =============================== Frame Rendering ======================================
+    
+    let tile_frame: Frame = show_tiles(&rom.chr_rom, 0);
+    texture.update(None, &tile_frame.data, 256*3).unwrap();
+    canvas.copy(&texture, None, None).unwrap();
+    canvas.present();
 
-    
-    // cpu.show_stack();
-    // cpu.show_stack();
+    loop {
+        for event in event_pump.poll_iter() {
+           match event {
+             Event::Quit { .. }
+             | Event::KeyDown {
+                keycode: Some(Keycode::Escape),
+                ..
+             } => std::process::exit(0),
+             _ => { /* do nothing */ }
+           }
+        }
+     }
+
+
+
+
+
+
     Ok(())
 
 }

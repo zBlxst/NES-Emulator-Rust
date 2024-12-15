@@ -83,22 +83,22 @@ impl CPU {
         }
     }
 
-    fn stack_push_u8(&mut self, value: u8) {
+    pub(super) fn stack_push_u8(&mut self, value: u8) {
         self.mem_write_u8(self.stack_base + self.reg_sp as u16, value);
         self.reg_sp = self.reg_sp.wrapping_sub(1);
     }
 
-    fn stack_pop_u8(&mut self) -> u8 {
+    pub(super) fn stack_pop_u8(&mut self) -> u8 {
         self.reg_sp = self.reg_sp.wrapping_add(1);
         self.mem_read_u8(self.stack_base + self.reg_sp as u16)   
     }
 
-    fn stack_push_u16(&mut self, value: u16) {
+    pub(super) fn stack_push_u16(&mut self, value: u16) {
         self.stack_push_u8((value >> 8) as u8);
         self.stack_push_u8((value & 0xff) as u8);
     }
 
-    fn stack_pop_u16(&mut self) -> u16 {
+    pub(super) fn stack_pop_u16(&mut self) -> u16 {
         let low = self.stack_pop_u8();
         let high = self.stack_pop_u8();
         (high as u16) << 8 | low as u16
@@ -120,7 +120,7 @@ impl CPU {
             CPUFlag::Break2    => 0b0010_0000,
             CPUFlag::Break     => 0b0001_0000,
             CPUFlag::Decimal   => 0b0000_1000,
-            CPUFlag::Interrupt => 0b0000_0100,
+            CPUFlag::InterruptDisabled => 0b0000_0100,
             CPUFlag::Zero      => 0b0000_0010,
             CPUFlag::Carry     => 0b0000_0001,
         }
@@ -136,18 +136,18 @@ impl CPU {
     }
 
 
-    fn put_flag(&mut self, flag: CPUFlag, value: bool) {
+    pub(super) fn put_flag(&mut self, flag: CPUFlag, value: bool) {
         match value {
             true => self.set_flag(flag),
             false => self.unset_flag(flag)
         }
     }
 
-    fn set_flag(&mut self, flag: CPUFlag) {
+    pub(super) fn set_flag(&mut self, flag: CPUFlag) {
         self.status |= CPU::mask_from_flag(flag);
     }
 
-    fn unset_flag(&mut self, flag: CPUFlag) {
+    pub(super) fn unset_flag(&mut self, flag: CPUFlag) {
         self.status &= !CPU::mask_from_flag(flag);
     }
 
@@ -333,7 +333,7 @@ impl CPU {
 
     // Clear interrupt disable
     pub(super) fn cli(&mut self, _addressmode: AddressingMode, _new_pc: u16) -> usize {
-        self.unset_flag(CPUFlag::Interrupt);
+        self.unset_flag(CPUFlag::InterruptDisabled);
         0
     }
 
@@ -670,7 +670,7 @@ impl CPU {
 
     // Set interruption disable flag
     pub(super) fn sei(&mut self, _addressmode: AddressingMode, _new_pc: u16) -> usize {
-        self.set_flag(CPUFlag::Interrupt);
+        self.set_flag(CPUFlag::InterruptDisabled);
         0
     }
 
