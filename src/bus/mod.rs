@@ -1,5 +1,6 @@
 use sdl2::libc::MOD_FREQUENCY;
 
+use crate::input::Joypad;
 use crate::mem::Mem;
 use crate::ppu::PPU;
 use crate::rom::Rom;
@@ -21,6 +22,9 @@ const PPU_ADDRESS_REGISTER: u16 = 0x2006;
 const PPU_DATA_REGISTER: u16 = 0x2007;
 const PPU_OAM_DMA_REGISTER: u16 = 0x4014;
 
+const JOYPAD1_ADDRESS: u16 = 0x4016;
+const JOYPAD2_ADDRESS: u16 = 0x4017;
+
 pub const PROGRAM_ROM_START: u16 = 0x8000;
 pub const PROGRAM_ROM_END: u16 = 0xffff;
 
@@ -36,18 +40,18 @@ pub struct Bus {
     cpu_vram: [u8; 0x800],
     program_rom: [u8; 0x8000],
     pub ppu: PPU,
-    screen: Screen, 
+    pub screen: Screen,
     gameloop_callback: fn(&PPU, &mut Screen)
 }
 
 impl Bus {
-    pub fn new(rom: Rom, gameloop_callback: fn(&PPU, &mut Screen)) -> Self {
+    pub fn new(rom: Rom, gameloop_callback: fn(&PPU, &mut Screen), joypad1: Joypad, joypad2: Joypad) -> Self {
         Bus {
             cpu_cycles: 0,
             cpu_vram: [0; 0x800],
             program_rom: rom.program_rom,
             ppu: PPU::new(rom.chr_rom, rom.screen_mirroring),
-            screen: Screen::new(),
+            screen: Screen::new(joypad1, joypad2),
             gameloop_callback: gameloop_callback
         }
     }
@@ -79,6 +83,24 @@ impl Bus {
     pub fn poll_interrupt_nmi(&mut self) -> Option<()> {
         self.ppu.poll_nmi_interrupt()
     }
+
+    pub fn read_joypad1(&mut self) -> u8 {
+        self.screen.joypad1.read()
+    }
+
+    pub fn read_joypad2(&mut self) -> u8 {
+        self.screen.joypad2.read()
+    }
+
+    pub fn write_joypad1(&mut self, value: u8) {
+        self.screen.joypad1.write(value);
+    }
+
+    pub fn write_joypad2(&mut self, value: u8) {
+        self.screen.joypad2.write(value);
+    }
+
+    
 }
 
 
@@ -108,6 +130,9 @@ impl Mem for Bus {
                 println!("{:04x}", mirrored_addr);
                 self.mem_read_u8(mirrored_addr)
             }
+
+            JOYPAD1_ADDRESS => self.read_joypad1(), // 0x2016
+            JOYPAD2_ADDRESS => self.read_joypad2(), // 0x2017
 
             PROGRAM_ROM_START..=PROGRAM_ROM_END => {// from 0x8000 to 0xffff
                 self.read_program_rom(addr)
@@ -153,6 +178,10 @@ impl Mem for Bus {
                 let mirrored_addr: u16 = addr & 0x2007;
                 self.mem_write_u8(mirrored_addr, value);
             }
+
+            JOYPAD1_ADDRESS => self.write_joypad1(value), // 0x2016
+            JOYPAD2_ADDRESS => self.write_joypad2(value), // 0x2017
+
             PROGRAM_ROM_START..=PROGRAM_ROM_END => {// from 0x8000 to 0xffff
                 panic!("Attempting to write on program ROM (at {:x})", addr);
             }

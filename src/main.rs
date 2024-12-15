@@ -1,6 +1,7 @@
 use anyhow::{Error, Result};
 use nes_emul::bus::Bus;
 use nes_emul::cpu::CPU;
+use nes_emul::input::{Joypad, JoypadButton};
 use nes_emul::mem::Mem;
 use nes_emul::ppu::PPU;
 use nes_emul::rom::Rom;
@@ -14,6 +15,7 @@ use sdl2::video::{WindowContext, Window};
 use sdl2::keyboard::Keycode;
 use sdl2::event::Event;
 
+use std::collections::HashMap;
 use std::io::Read;
 use std::fs::File;
 
@@ -64,19 +66,23 @@ fn read_screen_state(cpu: &mut CPU, frame: &mut [u8; 32 * 3 * 32]) -> bool {
 }   
 
 
+
 fn main() -> Result<()>{
     println!("Hello, world!");
 
     // ================================== CPU initialization ========================================
 
-    let game_path: String = String::from("rom_examples/Pac-Man.nes");
+    let game_path: String = String::from("rom_examples/metroid.nes");
     // let game_path: String = String::from("rom_examples/nestest.nes");
     let mut file: File = File::open(game_path.clone())?;
     let mut data: Vec<u8> = Vec::new();
     file.read_to_end(&mut data)?;
 
+
     let rom: Rom = Rom::new(&data)?; 
-    let bus = Bus::new(rom, |ppu: &PPU, screen: &mut Screen| {
+    let joypad1: Joypad = Joypad::new();
+    let joypad2: Joypad = Joypad::new();
+    let bus: Bus = Bus::new(rom, |ppu: &PPU, screen: &mut Screen| {
         render::render(ppu, &mut screen.frame);
         let mut texture: Texture<'_> = screen.creator.create_texture_target(PixelFormatEnum::RGB24, 256, 240).expect("Cannot create texture !");
         texture.update(None, &screen.frame.data, 256 * 3).unwrap();
@@ -92,11 +98,28 @@ fn main() -> Result<()>{
                   keycode: Some(Keycode::Escape),
                   ..
               } => std::process::exit(0),
+              Event::KeyDown { keycode, .. } => {
+                if let Some(key) = screen.bindings_joypad1.get(&keycode.unwrap_or(Keycode::Ampersand)) {
+                    screen.joypad1.set_button_pressed_status(*key, true);
+                } 
+
+                if let Some(key) = screen.bindings_joypad2.get(&keycode.unwrap_or(Keycode::Ampersand)) {
+                    screen.joypad2.set_button_pressed_status(*key, true);
+                } 
+            },
+            Event::KeyUp { keycode, .. } => {
+                if let Some(key) = screen.bindings_joypad1.get(&keycode.unwrap_or(Keycode::Ampersand)) {
+                    screen.joypad1.set_button_pressed_status(*key, false);
+                }
+                if let Some(key) = screen.bindings_joypad2.get(&keycode.unwrap_or(Keycode::Ampersand)) {
+                    screen.joypad2.set_button_pressed_status(*key, false);
+                } 
+            },
               _ => { /* do nothing */ }
             }
          }
         
-    });
+    }, joypad1, joypad2);
     let mut cpu: CPU = CPU::new(bus);
     // cpu.load_program(&game_code)?;
     cpu.reset();
