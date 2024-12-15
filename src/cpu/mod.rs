@@ -2,6 +2,7 @@ pub mod opcode;
 pub mod instruction;
 mod test;
 
+use std::fmt::format;
 use std::path::Path;
 
 use crate::error::Error;
@@ -12,13 +13,6 @@ use crate::rom::Rom;
 use opcode::{AddressingMode, Opcode, OPCODES};
 
 const DEFAULT_STATUS: u8 = 0x24;
-
-// macro_rules! instruct_name {
-//     ($func:ident) => {
-//         stringify!($func).to_uppercase()
-//     };
-// }
-
 
 #[derive(Debug)]
 pub struct CPU {
@@ -113,6 +107,54 @@ impl CPU {
     //     Ok(())
     // }
 
+    pub fn log_args_str(cpu: &mut CPU, opcode: &Opcode, args: u16, addressing_mode: AddressingMode) -> String {
+        match addressing_mode {
+            AddressingMode::Immediate => format!("#${:02X}", args & 0xff),
+            AddressingMode::Absolute => if opcode.name == "JMP" || opcode.name == "JSR" { format!("${:04X}", args) } else { format!("${:04X} = {:02X}", args, cpu.mem_read_u8(args)) },
+            AddressingMode::ZeroPage => format!("${:02X} = {:02X}", args & 0xff, cpu.mem_read_u8(args & 0xff)),
+            AddressingMode::ZeroPageX => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                format!("${:02X},X @ {:02X} = {:02X}", args & 0xff, addr, cpu.mem_read_u8(addr))
+            }
+            AddressingMode::ZeroPageY => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                format!("${:02X},Y @ {:02X} = {:02X}", args & 0xff, addr, cpu.mem_read_u8(addr))
+            }
+            AddressingMode::AbsoluteX => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                format!("${:04X},X @ {:04X} = {:02X}", args, addr, cpu.mem_read_u8(addr))
+            } 
+            AddressingMode::AbsoluteY => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                format!("${:04X},Y @ {:04X} = {:02X}", args, addr, cpu.mem_read_u8(addr))
+            }
+            AddressingMode::Indirect => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                if opcode.name == "JMP" || opcode.name == "JSR" {
+                    format!("(${:04X}) = {:04X}", args, addr)
+                } else {
+                    format!("(${:04X}) @ {:04X} = {:02X}", args, addr, cpu.mem_read_u8(addr))
+                }
+            }
+            AddressingMode::IndirectX => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                format!("(${:02X},X) @ {:02X} = {:04X} = {:02X}", args & 0xff, args.wrapping_add(cpu.reg_x as u16) & 0xff, addr, cpu.mem_read_u8(addr))
+            }
+            AddressingMode::IndirectY => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                format!("(${:02X}),Y = {:04X} @ {:04X} = {:02X}", args & 0xff, addr.wrapping_sub(cpu.reg_y as u16), addr, cpu.mem_read_u8(addr))
+            }
+            AddressingMode::Relative => {
+                let (_, addr): (bool, u16) = cpu.get_address_from_mode(addressing_mode, 0);
+                let offset: u8 = cpu.mem_read_u8(addr);
+                let value: u16 = if offset < 127 { cpu.reg_pc.wrapping_add(2).wrapping_add(offset as u16) } else { cpu.reg_pc.wrapping_add(2).wrapping_sub(256 - offset as u16) };
+                format!("${:04X}", value)
+            }
+            AddressingMode::Accumulator => format!("A"),
+            _ => String::from("")
+        }
+    }
+
 
     pub fn run_with_logs(&mut self, game_path : &str) -> Result<(), Error>{
         let mut logs : String = String::from("");
@@ -135,7 +177,7 @@ impl CPU {
                 _ => println!("Should not happen")
             }
             //Instruction in ASM
-            cpu_state.push_str("                                  ");   
+            cpu_state.push_str(&format!(" {}{} {:27} ", if opcode.official { " " } else { "*" }, opcode.name, CPU::log_args_str(self, &opcode, args, opcode.address_mode)));   
             // Registers state
             cpu_state.push_str(&format!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}", self.reg_a, self.reg_x, self.reg_y, self.status,self.reg_sp));
             cpu_state.push_str(&format!(" PPU:{:3},{:3} ", self.bus.ppu.scanline, self.bus.ppu.cycles));
