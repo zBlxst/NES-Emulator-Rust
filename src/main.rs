@@ -15,9 +15,6 @@ use std::io::{self, Read, Write};
 use std::fs::File;
 
 fn main() -> Result<()>{
-    println!("Hello, world!");
-
-    // ================================== CPU initialization ========================================
     let mut game_path: String = String::from("rom_examples/");
     let mut buffer: String = String::new();
     print!("Enter the rom path: rom_examples/");
@@ -29,6 +26,8 @@ fn main() -> Result<()>{
     let mut data: Vec<u8> = Vec::new();
     file.read_to_end(&mut data)?;
 
+
+    // ================================== CPU initialization ========================================
 
     let rom: Rom = Rom::new(&data)?; 
     let joypad1: Joypad = Joypad::new();
