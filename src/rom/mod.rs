@@ -73,6 +73,10 @@ impl Rom {
             (false, false) => Mirroring::HORIZONTAL,
         };
 
+        if data[4] > 2 {
+            return Err(RomError(String::from("Program Rom is too big !")));
+        }
+
         let program_rom_size: usize = data[4] as usize * PROG_ROM_PAGE_SIZE;
         let chr_rom_size: usize = data[5] as usize * CHR_ROM_PAGE_SIZE;
 
@@ -81,12 +85,9 @@ impl Rom {
         let program_rom_start: usize = 16 + if skip_trainer { 512 } else { 0 };
         let chr_rom_start: usize = program_rom_start + program_rom_size;
 
-        println!("Program Rom Start : {:04x}", program_rom_start);
-        println!("Program Rom Size : {:04x}", program_rom_size);
 
         let mut program_rom: [u8; 0x8000] = [0; 0x8000];
         program_rom[0x8000-program_rom_size..].copy_from_slice(&data[program_rom_start..(program_rom_start+program_rom_size)]);
-        println!("{:02x} {:02x} {:02x} {:02x}", program_rom[0], program_rom[1], program_rom[program_rom.len()-3], program_rom[program_rom.len()-4]);
 
         
         Ok(Rom{
