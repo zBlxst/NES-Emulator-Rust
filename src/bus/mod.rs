@@ -92,7 +92,8 @@ impl Bus {
     }
 
     pub fn read_joypad2(&mut self) -> u8 {
-        self.screen.joypad2.read()
+        // self.screen.joypad2.read()
+        0
     }
 
     pub fn write_joypad1(&mut self, value: u8) {
@@ -134,8 +135,8 @@ impl Mem for Bus {
                 self.mem_read_u8(mirrored_addr)
             }
 
-            JOYPAD1_ADDRESS => self.read_joypad1(), // 0x2016
-            JOYPAD2_ADDRESS => self.read_joypad2(), // 0x2017
+            JOYPAD1_ADDRESS => self.read_joypad1(), // 0x4016
+            JOYPAD2_ADDRESS => self.read_joypad2(), // 0x4017
 
             PROGRAM_ROM_START..=PROGRAM_ROM_END => {// from 0x8000 to 0xffff
                 self.read_program_rom(addr)
@@ -184,8 +185,8 @@ impl Mem for Bus {
                 self.mem_write_u8(mirrored_addr, value);
             }
 
-            JOYPAD1_ADDRESS => self.write_joypad1(value), // 0x2016
-            JOYPAD2_ADDRESS => self.write_joypad2(value), // 0x2017
+            JOYPAD1_ADDRESS => self.write_joypad1(value), // 0x4016
+            JOYPAD2_ADDRESS => self.write_joypad2(value), // 0x4017
 
             PROGRAM_ROM_START..=PROGRAM_ROM_END => {// from 0x8000 to 0xffff
                 panic!("Attempting to write on program ROM (at {:x})", addr);
