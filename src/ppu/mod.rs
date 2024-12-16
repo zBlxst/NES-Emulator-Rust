@@ -148,7 +148,6 @@ impl PPU {
         match addr {
             0..=0x1fff => {
                 println!("attempt to write to chr rom space {}", addr);
-                // self.chr_rom[addr as usize] = value;
             }, 
             0x2000..=0x2fff => {
                 self.vram[self.mirror_vram_addr(addr) as usize] = value;

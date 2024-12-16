@@ -1,5 +1,3 @@
-use sdl2::libc::MOD_FREQUENCY;
-
 use crate::input::Joypad;
 use crate::mem::Mem;
 use crate::ppu::PPU;
@@ -101,7 +99,6 @@ impl Bus {
     }
 
     pub fn write_joypad2(&mut self, value: u8) {
-        // println!("WOOOOOOOOOOOOOOOOOOO");
         self.screen.joypad1.write(value);
         self.screen.joypad2.write(value);
     }
@@ -145,13 +142,13 @@ impl Mem for Bus {
             }
 
             _ => {
+                // APU
                 // println!("Ignoring access to address {:x}", addr);
                 0
             }
         }
     }
 
-    // turn panics into Errors later
     fn mem_write_u8(&mut self, addr: u16, value: u8) {
         match addr {
             CPU_RAM_START..=CPU_RAM_END => {// from 0x0000 to 0x1fff
@@ -195,6 +192,7 @@ impl Mem for Bus {
             }
 
             _ => {
+                // APU 
                 // println!("Ignoring write-access to address {:x}", addr);
             }
         }

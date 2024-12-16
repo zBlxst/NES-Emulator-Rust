@@ -8,13 +8,17 @@
 #[cfg(test)]
 mod test {
     use std::vec;
+    use crate::{input::Joypad, rom::Rom};
+
     use super::super::*;
 
 
     impl CPU {
         pub fn test_prog(program: Vec<u8>) -> Self {
             let rom: Rom = Rom::new_from_program_rom(program).unwrap();
-            let bus: Bus = Bus::new(rom, |_, _| {});
+            let j1: Joypad = Joypad::new();
+            let j2: Joypad = Joypad::new();
+            let bus: Bus = Bus::new(rom, |_, _| {}, j1, j2);
             let mut cpu = CPU::new(bus);
             cpu.set_program_base(0x8000).unwrap();
             cpu.reset();

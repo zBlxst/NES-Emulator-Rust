@@ -1,7 +1,6 @@
 extern crate bitflags;
 use bitflags::bitflags;
 
-// We could use bitflags as well for the status flags of CPU?
 bitflags! {
 
     pub struct StatusRegister: u8 {

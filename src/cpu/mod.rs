@@ -2,13 +2,11 @@ pub mod opcode;
 pub mod instruction;
 mod test;
 
-use std::fmt::format;
 use std::path::Path;
 
 use crate::error::Error;
 use crate::mem::Mem;
 use crate::bus::{Bus, PROGRAM_BASE_POINTER, NMI_ADDRESS_POINTER};
-use crate::rom::Rom;
 
 use opcode::{AddressingMode, Opcode, OPCODES};
 
@@ -89,9 +87,6 @@ impl CPU {
     }
 
     pub fn interrupt_nmi(&mut self) {
-        // if self.get_flag(CPUFlag::InterruptDisabled) {
-        //     return;
-        // }
         self.stack_push_u16(self.reg_pc);
         let mut status: u8 = self.status;
         status |= CPU::mask_from_flag(CPUFlag::Break);
@@ -103,23 +98,6 @@ impl CPU {
         self.reg_pc = self.mem_read_u16(NMI_ADDRESS_POINTER);
     }
 
-    // We should check the size of the program
-    // pub fn load_program(&mut self, program: &Vec<u8>) -> Result<(), Error>{
-    //     // if self.program_base as usize + program.len() > 0x2000 {
-    //     //     return Err(Error::CpuError(String::from("The program cannot exceed 0x2000 (end of CPU RAM)")));
-    //     // }
-    //     // self.memory[(self.program_base as usize) .. ((self.program_base as usize) + program.len())].copy_from_slice(&program[..]);
-    //     self.mem_write_u16(PROGRAM_BASE_POINTER, self.program_base);
-    //     Ok(())
-    // }
-
-    // pub fn load_and_run(&mut self, program: &Vec<u8>) -> Result<(), Error> {
-    //     self.load_program(program)?;
-    //     self.reset();
-    //     // println!("{:?}", self);
-    //     self.run();
-    //     Ok(())
-    // }
 
     pub fn log_args_str(cpu: &mut CPU, opcode: &Opcode, args: u16, addressing_mode: AddressingMode) -> String {
         match addressing_mode {
@@ -243,7 +221,6 @@ impl CPU {
             cpu_state.push_str(&format!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}", self.reg_a, self.reg_x, self.reg_y, self.status,self.reg_sp));
             cpu_state.push_str(&format!(" PPU:{:3},{:3} ", self.bus.ppu.scanline, self.bus.ppu.cycles));
             cpu_state.push_str(&format!("CYC:{}\n", all_cycles));
-            // cpu_state.push_str(&format!("*sp:{:02x} [{:02x} {:02x} {:02x} {:02x}]\n", self.reg_sp + 0, self.mem_read_u8(self.stack_base + self.reg_sp as u16), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 1), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 2), self.mem_read_u8(self.stack_base + self.reg_sp as u16 + 3)));
             logs.push_str(cpu_state.as_str());
             print!("{}", cpu_state);
 

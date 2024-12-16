@@ -68,8 +68,7 @@ impl CPU {
             }
 
             AddressingMode::Accumulator | AddressingMode::Implied | AddressingMode::NoneAddressing => {
-                // panic!("Mode : {:?} is not supported", mode);
-                (false, 0)
+                panic!("Mode : {:?} is not supported", mode);
             }
 
         }
@@ -763,8 +762,6 @@ impl CPU {
         let mut x: u8 = self.reg_x;
         x &= self.reg_a;
         self.mem_write_u8(pos, x);
-        // self.update_n_flag(x);
-        // self.update_z_flag(x)
         0
     }
 
@@ -837,7 +834,6 @@ impl CPU {
     }
 
     // write (X & A - addrValue) in X
-    // PROBABLY WRONG
     pub(super) fn axs(&mut self, addressmode: AddressingMode, new_pc: u16) -> usize { 
         let (_page_cross, pos): (bool, u16) = self.get_address_from_mode(addressmode, new_pc);
         self.reg_x = (self.reg_a & self.reg_x).wrapping_sub(self.mem_read_u8(pos));
@@ -867,7 +863,6 @@ impl CPU {
     pub(super) fn dop(&mut self, _addressmode: AddressingMode, _new_pc: u16) -> usize { 0 }
 
     // Increment mem then substract it from Accumulator
-    // PROBABLY WRONG
     pub(super) fn isc(&mut self, addressmode: AddressingMode, new_pc: u16) -> usize {
         let (_page_cross, pos): (bool, u16) = self.get_address_from_mode(addressmode, new_pc);
         let to_write: u8 = self.mem_read_u8(pos).wrapping_add(1);
@@ -904,7 +899,7 @@ impl CPU {
 
     // Stop Program Counter (kill)
     // implement it in the loop?
-    pub(super) fn kil(&mut self, _addressmode: AddressingMode, _new_pc: u16) -> usize {self.set_flag(CPUFlag::Break); 0 }
+    pub(super) fn kil(&mut self, _addressmode: AddressingMode, _new_pc: u16) -> usize {self.running = false; 0 }
 
     // And with stack pointer, copy in sp, registers A and X
     pub(super) fn lar(&mut self, addressmode: AddressingMode, new_pc: u16) -> usize {
@@ -928,8 +923,6 @@ impl CPU {
         self.update_z_flag(self.reg_a);
         if page_cross { 1 } else { 0 }    
     }
-
-    // fn nop(&mut self, addressmode: AddressingMode, new_pc: u16) -> usize {} // more opcodes match with it
 
     // Rotate 1 bit let, And and store in accumulator 
     pub(super) fn rla(&mut self, addressmode: AddressingMode, new_pc: u16) -> usize {
@@ -1003,8 +996,6 @@ impl CPU {
 
     }
     
-    // fn sbc(&mut self, addressmode: AddressingMode, new_pc: u16) -> usize {} // more opcodes match with it
-
     // Shift 1 bit left in mem, then OR with Accumulator 
     pub(super) fn slo(&mut self, addressmode: AddressingMode, new_pc: u16) -> usize {
         let (_page_cross, pos): (bool, u16) = self.get_address_from_mode(addressmode, new_pc);

@@ -4,16 +4,13 @@ pub mod render;
 
 use std::collections::HashMap;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
 
 use frame::Frame;
 use sdl2::{Sdl, VideoSubsystem, EventPump};
-use sdl2::pixels::{Color, PixelFormatEnum};
-use sdl2::render::{Canvas, Texture, TextureCreator};
+use sdl2::render::{Canvas, TextureCreator};
 use sdl2::video::{WindowContext, Window};
 use sdl2::keyboard::Keycode;
-use sdl2::event::Event;
-use sdl2::video::SwapInterval;
 
 use crate::input::{Joypad, JoypadButton};
 
@@ -73,9 +70,6 @@ impl Screen {
         let creator: TextureCreator<WindowContext> = canvas.texture_creator();
         let frame: Frame = Frame::new();
 
-        // Remove V-Sync for speed-running !
-        // video_subsystem.gl_set_swap_interval(SwapInterval::Immediate).unwrap();
-        
         Screen {
             canvas: canvas,
             event_pump: event_pump,
