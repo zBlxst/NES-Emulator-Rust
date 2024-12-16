@@ -105,7 +105,6 @@ impl PPU {
                 if self.reg_control.generate_vblank_nmi() {
                     self.nmi_interrupt = Some(());
                 }
-                // todo!("trigger nmi intterupt")
             }
 
             if self.scanline >= SCANLINE_MAX {

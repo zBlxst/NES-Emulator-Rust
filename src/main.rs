@@ -33,7 +33,7 @@ fn main() -> Result<()>{
     let joypad1: Joypad = Joypad::new();
     let joypad2: Joypad = Joypad::new();
     let bus: Bus = Bus::new(rom, |ppu: &PPU, screen: &mut Screen| {
-        render::render(ppu, &mut screen.frame);
+        render::Renderer::render(ppu, &mut screen.frame);
         let mut texture: Texture<'_> = screen.creator.create_texture_target(PixelFormatEnum::RGB24, 256, 240).expect("Cannot create texture !");
         texture.update(None, &screen.frame.data, 256 * 3).unwrap();
  

@@ -102,13 +102,6 @@ impl CPU {
         let high = self.stack_pop_u8();
         (high as u16) << 8 | low as u16
     }
-
-    pub fn show_stack(&mut self) {
-        for i in 0x00..0x100 {
-            println!("0x{:02x}: {:02x}", i, self.mem_read_u8(self.stack_base + i))
-        }
-       
-    }
     
     // ======================== FLAG MANIPULATION ========================
 

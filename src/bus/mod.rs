@@ -2,6 +2,7 @@ use crate::input::Joypad;
 use crate::mem::Mem;
 use crate::ppu::PPU;
 use crate::rom::Rom;
+use crate::screen::render::Renderer;
 use crate::screen::Screen;
 
 pub const CPU_RAM_START: u16 = 0x0000;
@@ -30,8 +31,6 @@ pub const PROGRAM_BASE_POINTER: u16 = 0xfffc;
 pub const NMI_ADDRESS_POINTER: u16 = 0xfffa;
 
 
-
-// Is it possible to replace some constant 0x by const values?
 
 pub struct Bus {
     cpu_cycles: usize,
@@ -72,6 +71,7 @@ impl Bus {
     pub fn tick(&mut self, op_cycles : usize){
         self.cpu_cycles += op_cycles;
         let nmi_before = self.ppu.nmi_interrupt.is_some();
+        Renderer::forward(&self.ppu, &mut self.screen.frame, op_cycles * 3);
         self.ppu.tick(op_cycles * 3); // PPU runs 3 times faster than CPU
         let nmi_after = self.ppu.nmi_interrupt.is_some();
         
@@ -121,7 +121,8 @@ impl Mem for Bus {
                     if no_fail {
                         println!("Trying to read from write-only address {:04x}", addr); 0
                     } else {
-                        panic!("Trying to read from write-only address")
+                        // Some games try to do it on purpose, so just don't panic!
+                        println!("Trying to read from write-only address {:04x}", addr); 0
                     }
             }
 
