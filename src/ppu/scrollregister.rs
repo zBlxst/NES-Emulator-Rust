@@ -16,7 +16,6 @@ impl ScrollRegister {
     }
 
     pub fn write(&mut self, value: u8) {
-        println!("Writing {} to scroll", value);
         if self.changing_y {
             self.scroll_y = value;
         } else {

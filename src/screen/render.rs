@@ -95,7 +95,6 @@ pub fn render_name_table(ppu: &PPU, frame: &mut Frame, name_table: &[u8], viewpo
     
         let tile: &[u8] = &ppu.chr_rom[(bank + (tile_index*0x10) as usize)..(bank+ ((tile_index+1)*0x10) as usize)];
         let palette: [u8; 4] = bg_palette(ppu, attribute_table, tile_x, tile_y);
-        // println!("Tile : {} {:?}", i, tile);    
         for y in 0..=7 {
             let upper: u8 = tile[y];
             let lower: u8 = tile[y+8];
@@ -122,9 +121,9 @@ pub fn render_name_table(ppu: &PPU, frame: &mut Frame, name_table: &[u8], viewpo
 
 pub fn render(ppu: &PPU, frame: &mut Frame) {
 
+    // Draw background
     let scroll_x: usize = ppu.reg_scroll.scroll_x as usize;
     let scroll_y: usize = ppu.reg_scroll.scroll_y as usize;
-    println!("X : {} / Y : {} at {}", scroll_x, scroll_y, ppu.scanline);
 
 
     let (main_nametable, second_nametable) = match (&ppu.mirroring, ppu.reg_control.nametable_addr()) {

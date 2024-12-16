@@ -77,7 +77,6 @@ impl Bus {
         self.ppu.tick(op_cycles * 3); // PPU runs 3 times faster than CPU
         let nmi_after = self.ppu.nmi_interrupt.is_some();
         
-        // println!("Before : {} / After : {}", nmi_before, nmi_after);
         if !nmi_before && nmi_after {
             (self.gameloop_callback)(&self.ppu, &mut self.screen);
         } 
@@ -92,15 +91,18 @@ impl Bus {
     }
 
     pub fn read_joypad2(&mut self) -> u8 {
-        // self.screen.joypad2.read()
-        0
+        self.screen.joypad2.read()
+        // 0
     }
 
     pub fn write_joypad1(&mut self, value: u8) {
         self.screen.joypad1.write(value);
+        self.screen.joypad2.write(value);
     }
 
     pub fn write_joypad2(&mut self, value: u8) {
+        // println!("WOOOOOOOOOOOOOOOOOOO");
+        self.screen.joypad1.write(value);
         self.screen.joypad2.write(value);
     }
 

@@ -30,14 +30,12 @@ impl Joypad {
 
     pub fn write(&mut self, value: u8) {
         self.strobe = value & 1 == 1;
-        println!("Write {}", value);
         if self.strobe {
             self.button_index = 0;
         }
     }
 
     pub fn read(&mut self) -> u8 {
-        println!("Read {}", self.button_index);
         if self.button_index > 7 {
             return 1;
         }
