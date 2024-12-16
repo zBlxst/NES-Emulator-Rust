@@ -16,7 +16,7 @@ use sdl2::keyboard::Keycode;
 use sdl2::event::Event;
 
 use std::collections::HashMap;
-use std::io::Read;
+use std::io::{self, Read, Write};
 use std::fs::File;
 
 use rand::Rng;
@@ -71,8 +71,16 @@ fn main() -> Result<()>{
     println!("Hello, world!");
 
     // ================================== CPU initialization ========================================
-
-    let game_path: String = String::from("rom_examples/mario.nes");
+    let mut game_path: String = String::from("rom_examples/");
+    let mut buffer: String = String::new();
+    print!("Enter the rom path: rom_examples/");
+    io::stdout().flush().unwrap();
+    io::stdin().read_line(&mut buffer).unwrap();
+    game_path.push_str(&buffer[..&buffer.len()-1]);
+    
+    println!("Trying to load {}", game_path);
+    
+    // let game_path: String = String::from(game_path);
     // let game_path: String = String::from("rom_examples/pacman.nes");
     // let game_path: String = String::from("rom_examples/nestest.nes");
     let mut file: File = File::open(game_path.clone())?;
