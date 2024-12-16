@@ -73,9 +73,12 @@ impl Bus {
 
     pub fn tick(&mut self, op_cycles : usize){
         self.cpu_cycles += op_cycles;
-        let new_frame: bool = self.ppu.tick(op_cycles * 3); // PPU runs 3 times faster than CPU
+        let nmi_before = self.ppu.nmi_interrupt.is_some();
+        self.ppu.tick(op_cycles * 3); // PPU runs 3 times faster than CPU
+        let nmi_after = self.ppu.nmi_interrupt.is_some();
+        
         // println!("Before : {} / After : {}", nmi_before, nmi_after);
-        if new_frame {
+        if !nmi_before && nmi_after {
             (self.gameloop_callback)(&self.ppu, &mut self.screen);
         } 
     }
@@ -161,9 +164,11 @@ impl Mem for Bus {
             PPU_OAM_ADDRESS_REGISTER => self.ppu.write_to_oam_addr(value), // 0x2003
             PPU_OAM_DATA_REGISTER => self.ppu.write_to_oam_data(value), // 0x2004
 
-            PPU_SCROLL_REGISTER => println!("PPU Scroll register not implemented !"), // 0x2002
+            PPU_SCROLL_REGISTER => {
+                self.ppu.write_to_scroll(value); // 0x2005
+            }
             
-            PPU_STATUS_REGISTER => panic!("Trying to write to PPU Status !"), // 0x2005
+            PPU_STATUS_REGISTER => panic!("Trying to write to PPU Status !"), // 0x2002
 
             PPU_OAM_DMA_REGISTER => {
                 let mut buffer: [u8; 256] = [0; 256];

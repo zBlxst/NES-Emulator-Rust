@@ -1,7 +1,26 @@
 use crate::ppu::PPU;
+use crate::rom::Mirroring;
 
 use super::frame::Frame;
-use super::palette::{self, SYSTEM_PALLETE};
+use super::palette::SYSTEM_PALLETE;
+
+pub struct Rect {
+    x1: usize,
+    y1: usize,
+    x2: usize,
+    y2: usize,
+}
+
+impl Rect {
+    pub fn new(x1: usize, y1: usize, x2: usize, y2: usize) -> Self {
+        Rect {
+            x1: x1,
+            y1: y1,
+            x2: x2,
+            y2: y2,
+        }
+    }
+}
 
 pub fn show_tile(chr_rom: &Vec<u8>, bank: usize, tile_n: usize) -> Frame {
     assert!(bank < 2, "There are only 2 banks !");
@@ -64,23 +83,23 @@ pub fn show_tiles(chr_rom: &Vec<u8>, bank: usize) -> Frame {
     frame
 }
 
-pub fn render(ppu: &PPU, frame: &mut Frame) {
+pub fn render_name_table(ppu: &PPU, frame: &mut Frame, name_table: &[u8], viewport: Rect, shift_x: isize, shift_y: isize) {
     let bank: usize = ppu.reg_control.bg_pattern_addr() as usize;
-
+    let attribute_table: &[u8] = &name_table[0x03c0..0x0400];
     // Draw background
     for i in 0..0x03c0 {
-        let tile_index: u16 = ppu.vram[i] as u16;
+        let tile_index: u16 = name_table[i] as u16;
         let tile_x: usize = i % 32;
         let tile_y: usize = i / 32;
     
-
+    
         let tile: &[u8] = &ppu.chr_rom[(bank + (tile_index*0x10) as usize)..(bank+ ((tile_index+1)*0x10) as usize)];
-        let palette: [u8; 4] = bg_palette(ppu, tile_x, tile_y);
+        let palette: [u8; 4] = bg_palette(ppu, attribute_table, tile_x, tile_y);
         // println!("Tile : {} {:?}", i, tile);    
         for y in 0..=7 {
             let upper: u8 = tile[y];
             let lower: u8 = tile[y+8];
-
+    
             for x in 0..=7 {
                 let value: u8 = ((lower >> (7-x)) & 1) << 1 | ((upper >> (7-x)) & 1);
                 let rgb: (u8, u8, u8) = match value {
@@ -90,9 +109,48 @@ pub fn render(ppu: &PPU, frame: &mut Frame) {
                     3 => SYSTEM_PALLETE[palette[3] as usize],
                     _ => panic!("This should never happen !"),
                 };
-                frame.set_pixel(8*tile_x + x, 8*tile_y + y, rgb);
+                let pixel_x: usize = 8*tile_x + x;
+                let pixel_y: usize = 8*tile_y + y;
+                if pixel_x >= viewport.x1 && pixel_x < viewport.x2 && pixel_y >= viewport.y1 && pixel_y < viewport.y2 {
+                    frame.set_pixel((shift_x + pixel_x as isize) as usize, (shift_y + pixel_y as isize) as usize, rgb);
+                }
             }
         }
+    }
+
+}
+
+pub fn render(ppu: &PPU, frame: &mut Frame) {
+
+    let scroll_x: usize = ppu.reg_scroll.scroll_x as usize;
+    let scroll_y: usize = ppu.reg_scroll.scroll_y as usize;
+    println!("X : {} / Y : {} at {}", scroll_x, scroll_y, ppu.scanline);
+
+
+    let (main_nametable, second_nametable) = match (&ppu.mirroring, ppu.reg_control.nametable_addr()) {
+        (Mirroring::VERTICAL, 0x2000) | (Mirroring::VERTICAL, 0x2800) | (Mirroring::HORIZONTAL, 0x2000) | (Mirroring::HORIZONTAL, 0x2400) => {
+            (&ppu.vram[0..0x400], &ppu.vram[0x400..0x800])
+        }
+        (Mirroring::VERTICAL, 0x2400) | (Mirroring::VERTICAL, 0x2C00) | (Mirroring::HORIZONTAL, 0x2800) | (Mirroring::HORIZONTAL, 0x2C00) => {
+            ( &ppu.vram[0x400..0x800], &ppu.vram[0..0x400])
+        }
+        (_,_) => {
+            panic!("Not supported mirroring type {:?}", ppu.mirroring);
+        }
+    };
+
+    render_name_table(ppu, frame, main_nametable, 
+        Rect::new(scroll_x, scroll_y, 256, 240),
+         -(scroll_x as isize), -(scroll_y as isize));
+
+    if scroll_x > 0 {
+        render_name_table(ppu, frame, second_nametable, 
+            Rect::new(0, 0, scroll_x, 240),
+            (256-scroll_x) as isize, 0);    
+    } else if scroll_y > 0 {
+        render_name_table(ppu, frame, second_nametable, 
+            Rect::new(0, 0, 256, scroll_y),
+            0, (240 - scroll_y) as isize);    
     }
 
     // Draw sprites
@@ -137,9 +195,9 @@ pub fn render(ppu: &PPU, frame: &mut Frame) {
     }
 }
 
-fn bg_palette(ppu: &PPU, tile_col: usize, tile_row: usize) -> [u8; 4] {
+fn bg_palette(ppu: &PPU, attribute_table: &[u8], tile_col: usize, tile_row: usize) -> [u8; 4] {
     let attr_table_index: usize = (tile_row / 4) * 8 + (tile_col / 4);
-    let attr_byte: u8 = ppu.vram[0x03c0 + attr_table_index];
+    let attr_byte: u8 = attribute_table[attr_table_index];
     
     let palette_index: u8 = match ((tile_col % 4) / 2, (tile_row % 4) / 2) {
         (0, 0) => attr_byte & 0b11,

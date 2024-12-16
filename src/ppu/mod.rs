@@ -2,12 +2,14 @@ pub mod addressregister;
 pub mod controlregister;
 pub mod statusregister;
 pub mod maskregister;
+pub mod scrollregister;
 
 use crate::rom::Mirroring;
 
 use addressregister::AddressingRegister;
 use controlregister::ControlRegister;
 use maskregister::MaskRegister;
+use scrollregister::ScrollRegister;
 use statusregister::StatusRegister;
 
 
@@ -45,6 +47,7 @@ pub struct PPU {
     pub reg_oam_addr: u8,
     pub reg_oam_data: u8,
     pub reg_status: StatusRegister,
+    pub reg_scroll: ScrollRegister,
     pub nmi_interrupt: Option<()>,
 
     //internal registers
@@ -73,6 +76,7 @@ impl PPU {
             reg_oam_addr: 0,
             reg_oam_data: 0,
             reg_status: StatusRegister::new(),
+            reg_scroll: ScrollRegister::new(),
             nmi_interrupt: None,
 
 
@@ -90,24 +94,35 @@ impl PPU {
     pub fn tick(&mut self, ppu_cycles : usize) -> bool {
         self.cycles += ppu_cycles;
         if self.cycles >= SCANLINE_DURATION_IN_PPU_CYCLES {
+            if self.is_zero_sprite_hit(self.cycles) {
+                self.reg_status.set_sprite_zero_hit(true);
+            }
             self.cycles %= SCANLINE_DURATION_IN_PPU_CYCLES;
             self.scanline += 1;
             if self.scanline == SCANLINE_NMI_TRIGGER {
                 self.reg_status.set_vblank_status(true);
+                self.reg_status.set_sprite_zero_hit(false);
                 if self.reg_control.generate_vblank_nmi() {
                     self.nmi_interrupt = Some(());
                 }
                 // todo!("trigger nmi intterupt")
             }
 
-            if self.scanline >= SCANLINE_MAX{
+            if self.scanline >= SCANLINE_MAX {
                 self.scanline = 0;
                 self.reg_status.reset_vblank_status();
+                self.reg_status.set_sprite_zero_hit(false);
                 self.nmi_interrupt = None;
                 return true;
             }
         }
         return false;
+    }
+
+    fn is_zero_sprite_hit(&self, cycle: usize) -> bool {
+        let y = self.oam_data[0] as usize;
+        let x = self.oam_data[3] as usize;
+        (y == self.scanline as usize) && x <= cycle && self.reg_mask.show_sprites()
     }
 
     pub fn write_to_ppu_addr(&mut self, value: u8) {
@@ -180,6 +195,10 @@ impl PPU {
             self.oam_data[self.reg_oam_addr as usize] = *x;
             self.reg_oam_addr = self.reg_oam_addr.wrapping_add(1);
         }
+    }
+
+    pub fn write_to_scroll(&mut self, data: u8) {
+        self.reg_scroll.write(data);
     }
 
     pub fn read_data(&mut self) -> u8 {

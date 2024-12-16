@@ -38,8 +38,8 @@ impl Screen {
     pub fn new(joypad1: Joypad, joypad2: Joypad) -> Self {
 
         let mut bindings_joypad1: HashMap<Keycode, JoypadButton> = HashMap::new(); 
-        bindings_joypad1.insert(Keycode::Up, JoypadButton::UP);
         bindings_joypad1.insert(Keycode::Down, JoypadButton::DOWN);
+        bindings_joypad1.insert(Keycode::Up, JoypadButton::UP);
         bindings_joypad1.insert(Keycode::Right, JoypadButton::RIGHT);
         bindings_joypad1.insert(Keycode::Left, JoypadButton::LEFT);
         bindings_joypad1.insert(Keycode::Space, JoypadButton::SELECT);

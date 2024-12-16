@@ -72,7 +72,7 @@ fn main() -> Result<()>{
 
     // ================================== CPU initialization ========================================
 
-    let game_path: String = String::from("rom_examples/metroid.nes");
+    let game_path: String = String::from("rom_examples/mario.nes");
     // let game_path: String = String::from("rom_examples/nestest.nes");
     let mut file: File = File::open(game_path.clone())?;
     let mut data: Vec<u8> = Vec::new();
